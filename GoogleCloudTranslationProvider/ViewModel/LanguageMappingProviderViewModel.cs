@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
@@ -24,24 +25,19 @@ namespace GoogleCloudTranslationProvider.ViewModel
 		private ObservableCollection<LanguageMapping> _mappedLanguages;
 		private LanguageMapping _selectedMappedLanguage;
 
-		private bool _dialogResult;
-
 		private string _filter;
 		private string _languagesCountMessage;
 
-		private ICommand _applyChangesCommand;
-		private ICommand _cancelChangesCommand;
-		private ICommand _resetToDefaultCommand;
-		private ICommand _clearCommand;
-
-		public LanguageMappingProviderViewModel(ITranslationOptions translationOptions)
+		public LanguageMappingProviderViewModel(ITranslationOptions translationOptions, bool canResetToDefaults)
 		{
 			_translationOptions = translationOptions;
-			var defaultMapping = DatabaseExtensions.GetGoogleDefaultMapping(translationOptions).Result;
+			CanResetToDefaults = canResetToDefaults;
+			var defaultMapping = canResetToDefaults ? DatabaseExtensions.GetGoogleDefaultMapping(translationOptions) : null;
 			_database = new LanguageMappingDatabase(GetDatabaseName(), defaultMapping);
 			RetrieveMappedLanguagesFromDatabase();
 			FilteredMappedLanguages = MappedLanguages;
 			PropertyChanged += FilterPropertyChangedHandler;
+			InitializeCommands();
 		}
 
 		public ObservableCollection<LanguageMapping> MappedLanguages
@@ -102,23 +98,26 @@ namespace GoogleCloudTranslationProvider.ViewModel
 			}
 		}
 
-		public bool DialogResult
-		{
-			get => _dialogResult;
-			set
-			{
-				if (_dialogResult == value) return;
-				_dialogResult = value;
-				OnPropertyChanged(nameof(DialogResult));
-			}
-		}
+		public bool CanResetToDefaults { get; set; }
+
+		public event EventHandler LanguageMappingUpdated;
 
 		public event CloseWindowEventRaiser CloseEventRaised;
 
-		public ICommand ApplyChangesCommand => _applyChangesCommand ??= new RelayCommand(ApplyChanges, CanApplyChanges);
-		public ICommand CancelChangesCommand => _cancelChangesCommand ??= new RelayCommand(CancelChanges);
-		public ICommand ResetToDefaultCommand => _resetToDefaultCommand ??= new RelayCommand(ResetToDefault);
-		public ICommand ClearCommand => _clearCommand ??= new RelayCommand(Clear);
+		public ICommand ClearCommand { get; private set; }
+		public ICommand ApplyChangesCommand { get; private set; }
+		public ICommand OpenHyperlinkCommand { get; private set; }
+		public ICommand ResetToDefaultCommand { get; private set; }
+		public ICommand CloseApplicationCommand { get; private set; }
+
+		private void InitializeCommands()
+		{
+			ClearCommand = new RelayCommand(Clear);
+			ApplyChangesCommand = new RelayCommand(ApplyChanges, CanApplyChanges);
+			OpenHyperlinkCommand = new RelayCommand(OpenHyperlink);
+			ResetToDefaultCommand = new RelayCommand(ResetToDefault, (predicate) => CanResetToDefaults);
+			CloseApplicationCommand = new RelayCommand(CloseApplication);
+		}
 
 		private void RetrieveMappedLanguagesFromDatabase()
 		{
@@ -133,50 +132,7 @@ namespace GoogleCloudTranslationProvider.ViewModel
 			});
 
 			MappedLanguages = new ObservableCollection<LanguageMapping>(newMappedLanguages);
-			FilteredMappedLanguages = MappedLanguages;
-			Filter = string.Empty;
-		}
-
-		private void RefreshLanguagesCountMessage()
-		{
-			var totalLanguagesCount = MappedLanguages.Count;
-			var filteredLanguagesCount = FilteredMappedLanguages.Count;
-			LanguagesCountMessage = string.IsNullOrWhiteSpace(Filter)
-								  ? $"Total languages: {totalLanguagesCount}"
-								  : $"Total languages: {totalLanguagesCount}; Filtered: {filteredLanguagesCount}";
-		}
-
-		private void ApplyFilter()
-		{
-			if (string.IsNullOrWhiteSpace(Filter))
-			{
-				FilteredMappedLanguages = new ObservableCollection<LanguageMapping>(MappedLanguages);
-				return;
-			}
-
-			var filterLower = Filter.ToLower();
-			var filteredContent = MappedLanguages.Where(language =>
-				(!string.IsNullOrEmpty(language.Name) && language.Name.IndexOf(filterLower, StringComparison.OrdinalIgnoreCase) >= 0) ||
-				(!string.IsNullOrEmpty(language.Region) && language.Region.IndexOf(filterLower, StringComparison.OrdinalIgnoreCase) >= 0) ||
-				(!string.IsNullOrEmpty(language.TradosCode) && language.TradosCode.IndexOf(filterLower, StringComparison.OrdinalIgnoreCase) >= 0) ||
-				(!string.IsNullOrEmpty(language.LanguageCode) && language.LanguageCode.IndexOf(filterLower, StringComparison.OrdinalIgnoreCase) >= 0));
-
-			FilteredMappedLanguages = new ObservableCollection<LanguageMapping>(filteredContent);
-		}
-
-		private void ResetToDefault(object parameter)
-		{
-			if (ExecuteAction("Warning: Resetting to default values!\nAll changes will be lost and the database will be restored to its original state.\n\nThis action cannot be undone.", "Reset to default"))
-			{
-				_database.ResetToDefault();
-				RetrieveMappedLanguagesFromDatabase();
-			}
-		}
-
-		private bool ExecuteAction(string message, string title)
-		{
-			var dialogResult = MessageBox.Show(message, title, MessageBoxButton.OKCancel, MessageBoxImage.Warning);
-			return dialogResult == MessageBoxResult.OK;
+			ApplyFilter();
 		}
 
 		private void Clear(object parameter)
@@ -197,11 +153,38 @@ namespace GoogleCloudTranslationProvider.ViewModel
 			}
 		}
 
+		private void ApplyFilter()
+		{
+			if (string.IsNullOrWhiteSpace(Filter))
+			{
+				FilteredMappedLanguages = new ObservableCollection<LanguageMapping>(MappedLanguages);
+				return;
+			}
+
+			var filterLower = Filter.ToLower();
+			var filteredContent = MappedLanguages.Where(language =>
+				(!string.IsNullOrEmpty(language.Name) && language.Name.IndexOf(filterLower, StringComparison.OrdinalIgnoreCase) >= 0) ||
+				(!string.IsNullOrEmpty(language.Region) && language.Region.IndexOf(filterLower, StringComparison.OrdinalIgnoreCase) >= 0) ||
+				(!string.IsNullOrEmpty(language.TradosCode) && language.TradosCode.IndexOf(filterLower, StringComparison.OrdinalIgnoreCase) >= 0) ||
+				(!string.IsNullOrEmpty(language.LanguageCode) && language.LanguageCode.IndexOf(filterLower, StringComparison.OrdinalIgnoreCase) >= 0));
+
+			FilteredMappedLanguages = new ObservableCollection<LanguageMapping>(filteredContent);
+		}
+
+		private void RefreshLanguagesCountMessage()
+		{
+			var totalLanguagesCount = MappedLanguages.Count;
+			var filteredLanguagesCount = FilteredMappedLanguages.Count;
+			LanguagesCountMessage = string.IsNullOrWhiteSpace(Filter)
+								  ? $"Total languages: {totalLanguagesCount}"
+								  : $"Total languages: {totalLanguagesCount}; Filtered: {filteredLanguagesCount}";
+		}
+
 		private void ApplyChanges(object parameter)
 		{
 			_database.UpdateAll(MappedLanguages);
 			RetrieveMappedLanguagesFromDatabase();
-			ShutDownApp();
+			LanguageMappingUpdated?.Invoke(this, EventArgs.Empty);
 		}
 
 		private bool CanApplyChanges(object parameter)
@@ -209,15 +192,43 @@ namespace GoogleCloudTranslationProvider.ViewModel
 			return _database.HasMappedLanguagesChanged(MappedLanguages);
 		}
 
-		private void CancelChanges(object parameter)
+		private void OpenHyperlink(object parameter)
 		{
-			ShutDownApp();
+			if (parameter is not string uri
+			 || string.IsNullOrEmpty(uri))
+			{
+				return;
+			}
+
+			Process.Start(uri);
 		}
 
-		private void ShutDownApp()
+		private void ResetToDefault(object parameter)
 		{
-			DialogResult = true;
+			if (ExecuteAction(PluginResources.LMP_ResetToDefaults_Warning, PluginResources.LMP_Button_Reset))
+			{
+				_database.ResetToDefault();
+				RetrieveMappedLanguagesFromDatabase();
+				LanguageMappingUpdated?.Invoke(this, EventArgs.Empty);
+			}
+		}
+
+		private void CloseApplication(object parameter)
+		{
 			CloseEventRaised?.Invoke();
+		}
+
+		private bool ExecuteAction(string message, string title)
+		{
+			var dialogResult = MessageBox.Show(message, title, MessageBoxButton.OKCancel, MessageBoxImage.Warning);
+			return dialogResult == MessageBoxResult.OK;
+		}
+
+		private string GetDatabaseName()
+		{
+			return _translationOptions.SelectedGoogleVersion == ApiVersion.V2
+				 ? PluginResources.Database_PluginName_V2
+				 : PluginResources.Database_PluginName_V3;
 		}
 
 		private void FilterPropertyChangedHandler(object sender, PropertyChangedEventArgs e)
@@ -226,13 +237,6 @@ namespace GoogleCloudTranslationProvider.ViewModel
 			{
 				ApplyFilter();
 			}
-		}
-
-		private string GetDatabaseName()
-		{
-			return _translationOptions.SelectedGoogleVersion == ApiVersion.V2
-				 ? PluginResources.Database_PluginName_V2
-				 : PluginResources.Database_PluginName_V3;
 		}
 	}
 }

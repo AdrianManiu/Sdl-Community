@@ -38,8 +38,8 @@ namespace Sdl.Community.TMOptimizer.Control
             BuiltinRecognizers recognizers;
             if (_templateTranslationMemory != null && _templateTranslationMemory.FilePath != null)
             {
-                sourceCulture = _templateTranslationMemory.TranslationMemory.LanguageDirection.SourceLanguage;
-                targetCulture = _templateTranslationMemory.TranslationMemory.LanguageDirection.TargetLanguage;
+                sourceCulture = new Language(_templateTranslationMemory.TranslationMemory.LanguageDirection.SourceLanguage.ToString()).CultureInfo;
+                targetCulture = new Language(_templateTranslationMemory.TranslationMemory.LanguageDirection.TargetLanguage.ToString()).CultureInfo;
                 fuzzyIndexes = _templateTranslationMemory.TranslationMemory.FuzzyIndexes;
                 recognizers = _templateTranslationMemory.TranslationMemory.Recognizers;
             }

@@ -45,10 +45,10 @@ namespace InterpretBank.SqlBuilder
 			{
 				case StatementType.Insert:
 					{
-						var insertValuesString = $@"""{InsertValues[0]}""";
+						var insertValuesString = $@"{InsertValues[0]}";
 						foreach (var value in InsertValues.Skip(1))
 						{
-							insertValuesString += $@", ""{value}""";
+							insertValuesString += $@", {value}";
 						}
 
 						var insert = $"INSERT INTO {TableName} ({columnNamesString})";
@@ -170,7 +170,9 @@ namespace InterpretBank.SqlBuilder
 		}
 
 		public IConditionBuilder In(string columnName, SQLiteCommand sqlSelect, string @operator = "AND")
-		{
+        {
+            if (string.IsNullOrWhiteSpace(sqlSelect.CommandText)) return this;
+
 			foreach (SQLiteParameter sqlSelectParameter in sqlSelect.Parameters)
 			{
 				var newName = StoreAndGetReference(sqlSelectParameter.Value);

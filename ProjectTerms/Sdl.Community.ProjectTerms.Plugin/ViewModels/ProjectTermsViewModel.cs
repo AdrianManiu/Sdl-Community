@@ -47,9 +47,10 @@ namespace Sdl.Community.ProjectTerms.Plugin
 			extractor = new ProjectTermsExtractor();
 			cache = new ProjectTermsCache();
 
-			ProjectsController = SdlTradosStudio.Application.GetController<ProjectsController>();
+			ProjectsController = StudioContext.ProjectsController;
 			ProjectsController.SelectedProjectsChanged += ProjectsController_SelectedProjectsChanged;
 			OnSelectedProjectsChanged();
+
 		}
 
 		void ProjectsController_SelectedProjectsChanged(object sender, EventArgs e)
@@ -69,6 +70,14 @@ namespace Sdl.Community.ProjectTerms.Plugin
 				if (File.Exists(Utils.Utils.GetXMLFilePath(path, true)))
 				{
 					Terms = cache.ReadXmlFile(Utils.Utils.GetXMLFilePath(path, true));
+					if (Filters != null)
+					{
+						Terms = Terms
+				.FilterByBlackList(Filters.Blacklist)
+				.FilterByOccurrences(Filters.Occurrences)
+				.FilterByLength(Filters.Length);
+					}
+
 				}
 				else
 				{
@@ -91,12 +100,12 @@ namespace Sdl.Community.ProjectTerms.Plugin
 		{
 			List<ProjectFile> sourceFilesToProcessed = new List<ProjectFile>();
 
-			var projectSourceFiles = SdlTradosStudio.Application.GetController<ProjectsController>().CurrentProject.GetSourceLanguageFiles();
+			var projectSourceFiles = StudioContext.ProjectsController.CurrentProject.GetSourceLanguageFiles();
 			if (ProjectSelected)
 			{
 				foreach (var file in projectSourceFiles)
 				{
-					if (!file.Name.Contains(SdlTradosStudio.Application.GetController<ProjectsController>().CurrentProject.GetProjectInfo().Name))
+					if (!file.Name.Contains(StudioContext.ProjectsController.CurrentProject.GetProjectInfo().Name))
 					{
 						sourceFilesToProcessed.Add(file);
 					}
@@ -129,7 +138,45 @@ namespace Sdl.Community.ProjectTerms.Plugin
 		}
 		#endregion
 
+		public Filters GetTermFilters()
+		{
+			var filters = new Filters();
+			var selectedProject = ProjectsController.SelectedProjects.FirstOrDefault();
+
+			if (selectedProject != null)
+			{
+				var settingsBundle = selectedProject.GetSettings();
+				var _projectTermSetting = settingsBundle.GetSettingsGroup<ProjectTermsSettings>();
+				filters.Occurrences = _projectTermSetting.TermOccurrences;
+				filters.Length = _projectTermSetting.TermLength;
+			}
+			else
+			{
+				filters.Occurrences = 0;
+				filters.Length = 0;
+			}
+			return filters;
+		}
+		// method to update the term occurences and lengths
+		public void UpdateTerms(int occurrences, int length)
+		{
+			var selectedProject = ProjectsController.SelectedProjects.FirstOrDefault();
+
+			if (selectedProject != null)
+			{
+				var settingsBundle = selectedProject.GetSettings();
+				var _projectTermSetting = settingsBundle.GetSettingsGroup<ProjectTermsSettings>();
+
+				_projectTermSetting.TermOccurrences.Value = occurrences;
+				_projectTermSetting.TermLength.Value = length;
+				selectedProject.UpdateSettings(_projectTermSetting.SettingsBundle);
+
+				selectedProject.Save();
+			}
+		}
+
 		#region Extract Project Terms
+
 		public void ExtractProjectTermsAsync(Action<ProjectTermsCloudResult> resultCallback, Action<int> progressCallback)
 		{
 			var worker = new BackgroundWorker();
@@ -137,7 +184,8 @@ namespace Sdl.Community.ProjectTerms.Plugin
 
 			worker.DoWork += (sender, e) =>
 			{
-				extractor.Progress += (s, p) => {
+				extractor.Progress += (s, p) =>
+				{
 					if (worker.IsBusy)
 					{
 						worker.ReportProgress(p.Percent);

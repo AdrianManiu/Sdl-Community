@@ -5,21 +5,22 @@ using Sdl.Community.IATETerminologyProvider.Helpers;
 using Sdl.Community.IATETerminologyProvider.Service;
 using Sdl.Community.IATETerminologyProvider.View;
 using Sdl.Terminology.TerminologyProvider.Core;
+using Sdl.TranslationStudioAutomation.IntegrationApi;
 
 namespace Sdl.Community.IATETerminologyProvider
 {
 	[TerminologyProviderWinFormsUI]
-    public class IATETerminologyProviderWinFormsUI : ITerminologyProviderWinFormsUI
+    public class IATETerminologyProviderWinFormsUI : ITerminologyProviderWinFormsUIWithEdit
     {
         private readonly Logger _logger = LogManager.GetCurrentClassLogger();
         private MainWindow _mainWindow;
-        public bool SupportsEditing => true;
+
         public string TypeDescription => PluginResources.IATETerminologyProviderDescription;
         public string TypeName => PluginResources.IATETerminologyProviderName;
 
         public ITerminologyProvider[] Browse(IWin32Window owner, ITerminologyProviderCredentialStore credentialStore)
         {
-            _mainWindow = IATEApplication.GetMainWindow();
+			_mainWindow = IATEApplication.GetMainWindow();
             if (_mainWindow != null)
             {
 				_mainWindow.ShowDialog();
@@ -29,7 +30,7 @@ namespace Sdl.Community.IATETerminologyProvider
                 }
 
                 var provider = new IATETerminologyProvider(_mainWindow.ProviderSettings, IATEApplication.ConnectionProvider,
-                    IATEApplication.InventoriesProvider, IATEApplication.CacheProvider);
+                    IATEApplication.InventoriesProvider, IATEApplication.CacheProvider,IATEApplication.EUProvider);
 
                 return new ITerminologyProvider[] { provider };
             }
@@ -56,9 +57,6 @@ namespace Sdl.Community.IATETerminologyProvider
                 return false;
             }
 
-            var messageBoxService = new MessageBoxService();
-
-            //_settingsViewModel = new SettingsViewModel(provider.ProviderSettings, provider.InventoriesProvider, provider.CacheProvider, messageBoxService);
             _mainWindow = IATEApplication.GetMainWindow();
 
             if (!_mainWindow.ShowDialog() ?? false)

@@ -106,20 +106,20 @@ namespace Sdl.Community.DsiViewer {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to None.
+        /// </summary>
+        public static string CheckBox_None {
+            get {
+                return ResourceManager.GetString("CheckBox_None", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Poor.
         /// </summary>
         public static string CheckBox_Poor {
             get {
                 return ResourceManager.GetString("CheckBox_Poor", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Unknown.
-        /// </summary>
-        public static string CheckBox_Unknown {
-            get {
-                return ResourceManager.GetString("CheckBox_Unknown", resourceCulture);
             }
         }
         
@@ -228,9 +228,19 @@ namespace Sdl.Community.DsiViewer {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
         /// </summary>
-        public static System.Drawing.Icon Question {
+        public static System.Drawing.Icon Settings {
             get {
-                object obj = ResourceManager.GetObject("Question", resourceCulture);
+                object obj = ResourceManager.GetObject("Settings", resourceCulture);
+                return ((System.Drawing.Icon)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        /// </summary>
+        public static System.Drawing.Icon SourceCode {
+            get {
+                object obj = ResourceManager.GetObject("SourceCode", resourceCulture);
                 return ((System.Drawing.Icon)(obj));
             }
         }
@@ -283,9 +293,9 @@ namespace Sdl.Community.DsiViewer {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
         /// </summary>
-        public static System.Drawing.Icon TellMe {
+        public static System.Drawing.Icon TellmeDocumentation {
             get {
-                object obj = ResourceManager.GetObject("TellMe", resourceCulture);
+                object obj = ResourceManager.GetObject("TellmeDocumentation", resourceCulture);
                 return ((System.Drawing.Icon)(obj));
             }
         }

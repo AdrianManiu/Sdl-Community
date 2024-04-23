@@ -56,7 +56,6 @@ namespace Multilingual.Excel.FileType.Services
 		private uint _excelRowIndex;
 		private bool _isCDATA;
 
-
 		public BilingualWriter(SegmentBuilder segmentBuilder, EntityContext entityContext, EntityService entityService, ExcelReader excelReader, ExcelWriter excelWriter,
 			bool isPreview = false, bool isSource = false)
 		{
@@ -171,7 +170,8 @@ namespace Multilingual.Excel.FileType.Services
 			{
 				ReadAllWorkSheets = LanguageMappingSettings.LanguageMappingReadAllWorkSheets,
 				FirstRowIndex = LanguageMappingSettings.LanguageMappingFirstRowIndex,
-				FirstRowIndexIsHeading = LanguageMappingSettings.LanguageMappingFirstRowIsHeading
+				FirstRowIndexIsHeading = LanguageMappingSettings.LanguageMappingFirstRowIsHeading,
+				ReadHyperlinks = LanguageMappingSettings.LanguageMappingReadHyperlinks,
 			};
 			_excelSheets = new List<ExcelSheet>();
 
@@ -319,7 +319,7 @@ namespace Multilingual.Excel.FileType.Services
 
 			return segment;
 		}
-		
+
 		private string GetTargetSubContent(Stream subContentStream)
 		{
 			string subContent;
@@ -352,14 +352,67 @@ namespace Multilingual.Excel.FileType.Services
 				segmentPair.Target.Add(_segmentBuilder.Text(_segmentVisitor.Text));
 			}
 
+
 			var excelSheet = _excelSheets.FirstOrDefault(a => a.Index == _excelSheetIndex);
 			var excelRow = excelSheet?.Rows.FirstOrDefault(a => a.Index == _excelRowIndex);
 			if (excelRow != null)
 			{
-				//var sourceContent = excelRow.Cells.FirstOrDefault(a => a.Column.Name == _sourceLanguageMapping.ContentColumn);
+				var multilingualParagraphUnitContext = paragraphUnit.Properties.Contexts?.Contexts;
+				var multilingualParagraphUnitStructureInfo = paragraphUnit.Properties.Contexts?.StructureInfo?.ContextInfo;
+
+				var hyperlink = multilingualParagraphUnitContext?.FirstOrDefault(a => a.ContextType == "sdl:hyperlink");
+				var hyperlinkDataType = hyperlink?.GetMetaData("HyperlinkDataType");
+				var hyperlinkId = hyperlink?.GetMetaData("HyperlinkId");
+				var hyperlinkLocation = hyperlink?.GetMetaData("HyperlinkLocation");
+				var hyperlinkReference = _targetLanguageMapping.ContentColumn + excelRow.Index;
+				var hyperlinkIsExternal = hyperlink?.GetMetaData("HyperlinkIsExternal");
+				var hyperlinkDisplay = hyperlink?.GetMetaData("HyperlinkDisplay");
+
+				var sourceContent = excelRow.Cells.FirstOrDefault(a => a.Column.Name == _sourceLanguageMapping.ContentColumn);
 				var targetContent = excelRow.Cells.FirstOrDefault(a => a.Column.Name == _targetLanguageMapping.ContentColumn);
 
-				targetContent.Value = paragraphUnit.Target.ToString();
+				if (targetContent == null)
+				{
+					return;
+				}
+
+				if (hyperlink != null && !string.IsNullOrEmpty(hyperlinkDataType))
+				{
+					if (targetContent.Hyperlink == null )
+					{
+						targetContent.Hyperlink = sourceContent?.Hyperlink.Clone() as Hyperlink ?? new Hyperlink();
+					}
+
+					targetContent.Hyperlink.Id = hyperlinkId;
+					targetContent.Hyperlink.Location = hyperlinkLocation;
+					targetContent.Hyperlink.Reference = hyperlinkReference;
+					targetContent.Hyperlink.IsExternal = !string.IsNullOrEmpty(hyperlinkIsExternal) && Convert.ToBoolean(hyperlinkIsExternal);
+					targetContent.Hyperlink.Display = hyperlinkDisplay;
+
+					switch (hyperlinkDataType)
+					{
+						case nameof(targetContent.Hyperlink.Url):
+							targetContent.Hyperlink.Url = paragraphUnit.Target.ToString();
+							break;
+						case nameof(targetContent.Hyperlink.Tooltip):
+							targetContent.Hyperlink.Tooltip = paragraphUnit.Target.ToString();
+							break;
+						case nameof(targetContent.Hyperlink.Email):
+							targetContent.Hyperlink.Url = targetContent.Hyperlink.Url.Replace(targetContent.Hyperlink.Email,
+								paragraphUnit.Target.ToString());
+							targetContent.Hyperlink.Email = paragraphUnit.Target.ToString();
+							break;
+						case nameof(targetContent.Hyperlink.Subject):
+							targetContent.Hyperlink.Url = targetContent.Hyperlink.Url.Replace(targetContent.Hyperlink.Subject,
+								paragraphUnit.Target.ToString());
+							targetContent.Hyperlink.Subject = paragraphUnit.Target.ToString();
+							break;
+					}
+				}
+				else
+				{
+					targetContent.Value = paragraphUnit.Target.ToString();
+				}
 			}
 		}
 
@@ -402,7 +455,8 @@ namespace Multilingual.Excel.FileType.Services
 			{
 				ReadAllWorkSheets = LanguageMappingSettings.LanguageMappingReadAllWorkSheets,
 				FirstRowIndex = LanguageMappingSettings.LanguageMappingFirstRowIndex,
-				FirstRowIndexIsHeading = LanguageMappingSettings.LanguageMappingFirstRowIsHeading
+				FirstRowIndexIsHeading = LanguageMappingSettings.LanguageMappingFirstRowIsHeading,
+				ReadHyperlinks = LanguageMappingSettings.LanguageMappingReadHyperlinks,
 			};
 
 			var excelColumns = GetExcelColumns();

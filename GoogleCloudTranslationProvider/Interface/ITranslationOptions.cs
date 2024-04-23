@@ -6,6 +6,9 @@ namespace GoogleCloudTranslationProvider.Interfaces
 {
 	public interface ITranslationOptions
 	{
+		 string ProviderName { get; }
+		string Id { get; set; }
+
 		bool SendPlainTextOnly { get; set; }
 
 		bool PersistGoogleKey { get; set; }
@@ -35,6 +38,10 @@ namespace GoogleCloudTranslationProvider.Interfaces
 		string ApiKey { get; set; }
 
 		List<string> LanguagesSupported { get; set; }
+
+		List<V2LanguageModel> V2SupportedLanguages { get; set; }
+
+		List<V3LanguageModel> V3SupportedLanguages { get; set; }
 
 		Uri Uri { get; }
 

@@ -4,8 +4,8 @@
 		<SignAssembly>True</SignAssembly>
 		<TargetFramework>net48</TargetFramework>
 		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-		<PluginDeploymentPath>$(AppData)\Trados\Trados Studio\17\Plugins</PluginDeploymentPath>
-		<TradosFolder>$(MSBuildProgramFiles32)\Trados\Trados Studio\Studio17</TradosFolder>
+		<PluginDeploymentPath>$(AppData)\Trados\Trados Studio\18\Plugins</PluginDeploymentPath>
+		<TradosFolder>$(MSBuildProgramFiles32)\Trados\Trados Studio\Studio18</TradosFolder>
 		<LangVersion>latest</LangVersion>
 		<UseWPF>true</UseWPF>
   </PropertyGroup>
@@ -86,7 +86,7 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data.SQLite">
-      <HintPath>$(MSBuildProgramFiles32)\Trados\Trados Studio\Studio17\System.Data.SQLite.dll</HintPath>
+      <HintPath>$(TradosFolder)\System.Data.SQLite.dll</HintPath>
     </Reference>
     <Reference Include="System.Drawing" />
     <Reference Include="System.Web" />
@@ -116,9 +116,7 @@
   <ItemGroup>
   	<PackageReference Include="Google.Cloud.AutoML.V1" Version="2.4.0" />
   	<PackageReference Include="Google.Cloud.Translate.V3" Version="2.4.0" />
-  	<PackageReference Include="Google.Cloud.Translation.V2" Version="3.2.0" />
   	<PackageReference Include="LanguageMappingProvider" Version="1.0.92" />
-  	<PackageReference Include="RestSharp" Version="108.0.2" />
 		<PackageReference Include="Sdl.Core.PluginFramework" Version="2.1.0" />
 		<PackageReference Include="Sdl.Core.PluginFramework.Build" Version="17.0.0" />
   </ItemGroup>

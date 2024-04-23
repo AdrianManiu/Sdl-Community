@@ -10,12 +10,7 @@ namespace InterpretBankTests
 {
 	public class GlossaryServiceTests
 	{
-		private readonly GlossaryServiceBuilder _glossaryServiceBuilder;
-
-		public GlossaryServiceTests()
-		{
-			_glossaryServiceBuilder = new GlossaryServiceBuilder();
-		}
+		private readonly GlossaryServiceBuilder _glossaryServiceBuilder = new();
 
 		[Fact]
 		public void CreateDatabase_Test()
@@ -47,19 +42,19 @@ namespace InterpretBankTests
 
 			connectionMock
 				.Received()
-				.ExecuteCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == createGlossaryDataCommand));
+				.ExecuteSelectCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == createGlossaryDataCommand));
 			connectionMock
 				.Received()
-				.ExecuteCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == createGlossaryMetadataCommand));
+				.ExecuteSelectCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == createGlossaryMetadataCommand));
 			connectionMock
 				.Received()
-				.ExecuteCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == createTagLinkCommand));
+				.ExecuteSelectCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == createTagLinkCommand));
 			connectionMock
 				.Received()
-				.ExecuteCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == createDatabaseInfoCommand));
+				.ExecuteSelectCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == createDatabaseInfoCommand));
 			connectionMock
 				.Received()
-				.ExecuteCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == createTagListCommand));
+				.ExecuteSelectCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == createTagListCommand));
 		}
 
 		[Fact]
@@ -74,10 +69,10 @@ namespace InterpretBankTests
 
 			connectionMock
 				.Received()
-				.ExecuteCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == "SELECT * FROM DatabaseInfo"));
+				.ExecuteSelectCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == "SELECT * FROM DatabaseInfo"));
 			connectionMock
 				.Received()
-				.ExecuteCommand(Arg.Is<SQLiteCommand>(s => s.CommandText ==
+				.ExecuteSelectCommand(Arg.Is<SQLiteCommand>(s => s.CommandText ==
 															@"INSERT INTO GlossaryMetadata (GlossaryCreator, GlossaryDataCreation, GlossaryDescription, GlossarySetting, Tag1, Tag2) VALUES (""@0"", ""@1"", ""@2"", ""@3"", ""@4"", ""@5"")"));
 		}
 
@@ -93,10 +88,10 @@ namespace InterpretBankTests
 
 			connectionMock
 				.Received()
-				.ExecuteCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == "SELECT * FROM DatabaseInfo"));
+				.ExecuteSelectCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == "SELECT * FROM DatabaseInfo"));
 			connectionMock
 				.Received()
-				.ExecuteCommand(Arg.Is<SQLiteCommand>(s => s.CommandText ==
+				.ExecuteSelectCommand(Arg.Is<SQLiteCommand>(s => s.CommandText ==
 					@"INSERT INTO GlossaryData (CommentAll, RecordCreation, Tag1, Tag2) VALUES (""@0"", ""@1"", ""@2"", ""@3"")"));
 		}
 
@@ -106,7 +101,7 @@ namespace InterpretBankTests
 			var connectionMock = GetConnectionMock();
 
 			connectionMock
-				.ExecuteCommand(default)
+				.ExecuteSelectCommand(default)
 				.ReturnsForAnyArgs
 				(
 					null,
@@ -122,20 +117,20 @@ namespace InterpretBankTests
 				.WithDatabaseConnection(connectionMock)
 				.Build();
 
-			glossaryService.DeleteGlossary("5");
+			glossaryService.DeleteGlossary(5);
 
 			connectionMock
 				.Received()
-				.ExecuteCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == "SELECT * FROM DatabaseInfo"));
+				.ExecuteSelectCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == "SELECT * FROM DatabaseInfo"));
 
 			connectionMock
 				.Received()
-				.ExecuteCommand(Arg.Is<SQLiteCommand>(s =>
+				.ExecuteSelectCommand(Arg.Is<SQLiteCommand>(s =>
 					s.CommandText == "SELECT Tag1, Tag2 FROM GlossaryMetadata WHERE ID = 5"));
 
 			connectionMock
 				.Received()
-				.ExecuteCommand(
+				.ExecuteSelectCommand(
 					Arg.Is<SQLiteCommand>(s =>
 						s.CommandText ==
 						@"DELETE FROM GlossaryData WHERE Tag1 = TestGlossary AND Tag2 = TestSubGlossary"));
@@ -153,11 +148,11 @@ namespace InterpretBankTests
 
 			connectionMock
 				.Received()
-				.ExecuteCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == "SELECT * FROM DatabaseInfo"));
+				.ExecuteSelectCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == "SELECT * FROM DatabaseInfo"));
 
 			connectionMock
 				.Received()
-				.ExecuteCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == @"DELETE FROM GlossaryData WHERE (ID = @0)"));
+				.ExecuteSelectCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == @"DELETE FROM GlossaryData WHERE (ID = @0)"));
 		}
 
 		[Fact]
@@ -168,10 +163,10 @@ namespace InterpretBankTests
 				.WithDatabaseConnection(new DatabaseConnection(filepath))
 				.Build();
 
-			var termList = glossaryService.GetGlossaries();
+			var glossaryList = glossaryService.GetGlossaries();
 
-			Assert.Equal(6, termList.Count);
-			Assert.Equal(typeof(GlossaryMetadataEntry), termList[0].GetType());
+			Assert.Equal(12, glossaryList.Count);
+			Assert.Equal(typeof(GlossaryMetadataEntry), glossaryList[0].GetType());
 		}
 
 		[Fact]
@@ -221,7 +216,7 @@ namespace InterpretBankTests
 			};
 
 			connectionMock
-				.ExecuteCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == expectedSqlStatement))
+				.ExecuteSelectCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == expectedSqlStatement))
 				.Returns(sqlData);
 
 			//Act
@@ -231,11 +226,11 @@ namespace InterpretBankTests
 			//Assert
 			connectionMock
 				.Received()
-				.ExecuteCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == "SELECT * FROM DatabaseInfo"));
+				.ExecuteSelectCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == "SELECT * FROM DatabaseInfo"));
 
 			connectionMock
 				.Received()
-				.ExecuteCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == expectedSqlStatement));
+				.ExecuteSelectCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == expectedSqlStatement));
 
 			Assert.Single(termList);
 			Assert.Equal(typeof(TermEntry), termList[0].GetType());
@@ -253,10 +248,10 @@ namespace InterpretBankTests
 
 			connectionMock
 				.Received()
-				.ExecuteCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == "SELECT * FROM DatabaseInfo"));
+				.ExecuteSelectCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == "SELECT * FROM DatabaseInfo"));
 			connectionMock
 				.Received()
-				.ExecuteCommand(Arg.Is<SQLiteCommand>(s =>
+				.ExecuteSelectCommand(Arg.Is<SQLiteCommand>(s =>
 					s.CommandText ==
 					@"UPDATE GlossaryData SET Tag1 = ""@0"", Tag2 = ""@1"" WHERE Tag1 = ""ToBeMergedGlossary"""));
 		}
@@ -277,11 +272,11 @@ namespace InterpretBankTests
 
 			connectionMock
 				.Received()
-				.ExecuteCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == "SELECT * FROM DatabaseInfo"));
+				.ExecuteSelectCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == "SELECT * FROM DatabaseInfo"));
 
 			connectionMock
 				.Received()
-				.ExecuteCommand(Arg.Is<SQLiteCommand>(s =>
+				.ExecuteSelectCommand(Arg.Is<SQLiteCommand>(s =>
 					s.CommandText ==
 					@"UPDATE GlossaryMetadata SET GlossaryCreator = ""@0"", GlossaryDataCreation = ""@1"", GlossaryDescription = ""@2"", GlossarySetting = ""@3"", Tag1 = ""@4"", Tag2 = ""@5"" WHERE (ID = @6)"));
 		}
@@ -302,11 +297,11 @@ namespace InterpretBankTests
 
 			connectionMock
 				.Received()
-				.ExecuteCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == "SELECT * FROM DatabaseInfo"));
+				.ExecuteSelectCommand(Arg.Is<SQLiteCommand>(s => s.CommandText == "SELECT * FROM DatabaseInfo"));
 
 			connectionMock
 				.Received()
-				.ExecuteCommand(Arg.Is<SQLiteCommand>(s =>
+				.ExecuteSelectCommand(Arg.Is<SQLiteCommand>(s =>
 					s.CommandText ==
 					@"UPDATE GlossaryData SET CommentAll = ""@0"", RecordCreation = ""@1"", Tag1 = ""@2"", Tag2 = ""@3"" WHERE (ID = @4)"));
 		}

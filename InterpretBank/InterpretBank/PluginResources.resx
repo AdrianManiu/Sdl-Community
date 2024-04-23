@@ -121,6 +121,91 @@
     <value>InterpretBank</value>
   </data>
   <data name="GlossaryExchangeServiceManager_CreateFileReader_The_file_type__0__is_not_supported" xml:space="preserve">
-	  <value>The file type {0} is not supported</value>
+    <value>The file type {0} is not supported</value>
+  </data>
+  <data name="Plugin_Description" xml:space="preserve">
+    <value>InterpretBank description</value>
+  </data>
+  <data name="SettingsWindow_GroupBox_Header" xml:space="preserve">
+    <value>Interpret Bank Settings</value>
+  </data>
+  <data name="SettingsWindow_TextBlock_DBFilepath" xml:space="preserve">
+    <value>Database file path:</value>
+  </data>
+  <data name="SettingsWindow_TextBlock_Tags" xml:space="preserve">
+    <value>Use the glossaries tagged with the following:</value>
+  </data>
+  <data name="SettingsWindow_TextBlock_Glossaries" xml:space="preserve">
+    <value>Use the following glossaries:</value>
+  </data>
+  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
+  <data name="AddTerm" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\AddTerm.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="CommitToDb" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\CommitToDb.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="Booth" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\Booth.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="IB" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\IB.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="Remove" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\Remove.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="Remove2" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\Remove2.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="RemoveClick" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\RemoveClick.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="ToolTip_LocateInterpretBankDatabase" xml:space="preserve">
+    <value>Locate your private Interpret Bank database</value>
+  </data>
+  <data name="Question" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\Question.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="TellmeDocumentation" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\TellmeDocumentation.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="SourceCode" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\SourceCode.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="Settings" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\Settings.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="Message_PleaseCreateTags" xml:space="preserve">
+    <value>There are no tags on this db. To be able to use tags, please go to the database configurator and create some.</value>
+  </data>
+  <data name="Browse" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\Browse.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="ImportEntriesIntoSelectedGlossary" xml:space="preserve">
+    <value>Import entries into selected glossary</value>
+  </data>
+  <data name="ImportEntries" xml:space="preserve">
+    <value>Import entries</value>
+  </data>
+  <data name="Add" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\Add.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="Tooltip_AddNewGlossary" xml:space="preserve">
+    <value>Add new glossary</value>
+  </data>
+  <data name="Tooltip_AddNewTag" xml:space="preserve">
+    <value>Add new tag</value>
+  </data>
+  <data name="Message_TypeNameOfNewGlossary" xml:space="preserve">
+    <value>Type the name of the new glossary</value>
+  </data>
+  <data name="Message_TypeNameOfNewTag" xml:space="preserve">
+    <value>Type the name of the new tag</value>
+  </data>
+  <data name="Message_GlossaryAlreadyExists" xml:space="preserve">
+    <value>This glossary already exists</value>
+  </data>
+  <data name="Message_TagAlreadyExists" xml:space="preserve">
+    <value>This tag already exists</value>
   </data>
 </root>

@@ -336,8 +336,12 @@ namespace Sdl.Community.XLIFF.Manager.FileTypeSupport.SDLXLIFF
 			var placeholder = GetElement(elementPlaceholder.TagId, originalTarget, originalSource, elementPlaceholder);
 			if (placeholder == null)
 			{
-				placeholder = _segmentBuilder.CreatePlaceholder(elementPlaceholder.TagId,
+				_segmentBuilder.CreatePlaceholder(elementPlaceholder.TagId, elementPlaceholder.DisplayText,
 					elementPlaceholder.TagContent);
+			}
+			else if (!_segmentBuilder.ExistingTagIds.Contains(elementPlaceholder.TagId))
+			{
+				_segmentBuilder.ExistingTagIds.Add(elementPlaceholder.TagId);
 			}
 
 			var container = containers.Peek();
@@ -379,6 +383,10 @@ namespace Sdl.Community.XLIFF.Manager.FileTypeSupport.SDLXLIFF
 				{
 					lockedContent = _segmentBuilder.CreateLockedContent();
 				}
+				else if (!_segmentBuilder.ExistingTagIds.Contains(lockedContentId.ToString()))
+				{
+					_segmentBuilder.ExistingTagIds.Add(lockedContentId.ToString());
+				}
 
 				if (lockedContent is IAbstractMarkupDataContainer lockedContentContainer)
 				{
@@ -408,6 +416,10 @@ namespace Sdl.Community.XLIFF.Manager.FileTypeSupport.SDLXLIFF
 				if (tagPair == null)
 				{
 					tagPair = _segmentBuilder.CreateTagPair(elementTagPair.TagId, elementTagPair.TagContent);
+				}
+				else if (!_segmentBuilder.ExistingTagIds.Contains(elementTagPair.TagId))
+				{
+					_segmentBuilder.ExistingTagIds.Add(elementTagPair.TagId);
 				}
 
 				if (tagPair is IAbstractMarkupDataContainer tagPairContainer)

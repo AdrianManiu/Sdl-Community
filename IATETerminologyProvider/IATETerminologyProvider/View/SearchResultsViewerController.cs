@@ -1,5 +1,4 @@
-﻿using System.Windows.Forms;
-using Sdl.Desktop.IntegrationApi;
+﻿using Sdl.Desktop.IntegrationApi;
 using Sdl.Desktop.IntegrationApi.Extensions;
 using Sdl.Desktop.IntegrationApi.Interfaces;
 using Sdl.TranslationStudioAutomation.IntegrationApi;
@@ -14,17 +13,29 @@ namespace Sdl.Community.IATETerminologyProvider.View
 	[ViewPartLayout(typeof(EditorController), Dock = DockType.Bottom)]
 	public class SearchResultsViewerController : AbstractViewPartController
 	{
-		private readonly SearchResultsControl _control = new SearchResultsControl();
-		
-		protected override void Initialize()
+		private readonly SearchResultsControl _control = new();
+
+		public static bool IsInitialized { get; set; }
+
+		public BrowserWindow Browser => _control.Browser;
+
+		public string Url { get; set; }
+
+		public void NavigateTo(string url)
 		{
+			Url = url;
+			if (!IsVisible) Show();
+			Navigate();
 		}
 
-		protected override IUIControl GetContentControl()
+		protected override IUIControl GetContentControl() => _control;
+
+		protected override async void Initialize()
 		{
-			return _control;
+			IsInitialized = true;
+			await Browser.InitializeWebView();
 		}
 
-		public WebBrowser Browser => _control.Browser;
+		private void Navigate() => Browser.Navigate(Url);
 	}
 }

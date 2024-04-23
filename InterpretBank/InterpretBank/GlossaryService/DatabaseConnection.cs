@@ -33,7 +33,7 @@ namespace InterpretBank.GlossaryService
 			}
 		}
 
-		public List<Dictionary<string, string>> ExecuteCommand(SQLiteCommand cmdQuery)
+		public List<Dictionary<string, string>> ExecuteSelectCommand(SQLiteCommand cmdQuery)
 		{
 			_connection.Open();
 
@@ -55,10 +55,25 @@ namespace InterpretBank.GlossaryService
 			_connection.Close();
 			return rows;
 		}
+        
+        public void ExecuteNonSelectCommand(SQLiteCommand cmdQuery)
+		{
+			_connection.Open();
+
+			cmdQuery.Connection = _connection;
+			cmdQuery.ExecuteNonQuery();
+
+			_connection.Close();
+		}
 
 		public void LoadDatabase(string filePath)
 		{
 			_connection.ConnectionString = $"Data Source='{filePath}';Cache=Shared";
 		}
-	}
+
+        public void Dispose()
+        {
+            _connection?.Dispose();
+        }
+    }
 }

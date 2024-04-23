@@ -1,9 +1,10 @@
 ﻿using System;
+using Google.Protobuf.WellKnownTypes;
 using GoogleCloudTranslationProvider.Extensions;
 using GoogleCloudTranslationProvider.GoogleAPI;
+using GoogleCloudTranslationProvider.Helpers;
 using GoogleCloudTranslationProvider.Interfaces;
 using GoogleCloudTranslationProvider.Models;
-using GoogleCloudTranslationProvider.Service;
 using Newtonsoft.Json;
 using Sdl.LanguagePlatform.Core;
 using Sdl.LanguagePlatform.TranslationMemoryApi;
@@ -25,17 +26,7 @@ namespace GoogleCloudTranslationProvider.Studio
 
 		public ITranslationOptions Options { get; set; }
 
-		public string Name
-		{
-			get
-			{
-				var customName = Options.CustomProviderName;
-				var useCustomName = Options.UseCustomProviderName;
-				var selectedVersion = Options.SelectedGoogleVersion;
-				var providerName = customName.SetProviderName(useCustomName, selectedVersion);
-				return providerName;
-			}
-		}
+		public string Name => Options.ProviderName;
 
 		public ProviderStatusInfo StatusInfo => new(true, Constants.GoogleNaming_FullName);
 		
@@ -79,6 +70,7 @@ namespace GoogleCloudTranslationProvider.Studio
 
 		public bool SupportsLanguageDirection(LanguagePair languageDirection)
 		{
+			DatabaseExtensions.CreateDatabase(Options);
 			if (Options.SelectedGoogleVersion is not ApiVersion.V2)
 			{
 				_googleV3Api ??= new V3Connector(Options);

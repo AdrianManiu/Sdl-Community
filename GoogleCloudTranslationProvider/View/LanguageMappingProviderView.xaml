@@ -54,12 +54,13 @@
 					 Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}"
 					 Style="{StaticResource WatermarkTextBox}"
 					 BorderBrush="#FFBFCDD4"
+					 AutomationProperties.Name="Language filter text box"
 					 uiHelpers:TextBoxWatermarkHelper.WatermarkText="{x:Static root:PluginResources.LMP_Filter_Watermark}"
 					 uiHelpers:TextBoxWatermarkHelper.ButtonCommand="{Binding ClearCommand}"
 					 uiHelpers:TextBoxWatermarkHelper.ButtonCommandParameter="{uiHelpers:NameOf Member=Filter, Type={x:Type viewmodel:LanguageMappingProviderViewModel}}"
 					 HorizontalAlignment="Right"
-					 Width="232" 
-					 Margin="16 12 16 0"/>
+					 Width="232"
+					 Margin="16 12 16 0" />
 
 			<DataGrid ItemsSource="{Binding FilteredMappedLanguages}"
 					  SelectedItem="{Binding SelectedMappedLanguage}"
@@ -69,6 +70,7 @@
 					  AutoGenerateColumns="False"
 					  Grid.Row="2"
 					  HorizontalAlignment="Stretch"
+					  AutomationProperties.Name="Language Mapping Table, 4 columns"
 					  ScrollViewer.VerticalScrollBarVisibility="Auto"
 					  ScrollViewer.HorizontalScrollBarVisibility="Auto"
 					  CanUserSortColumns="True"
@@ -89,7 +91,7 @@
 										IsReadOnly="True"
 										Width="1*" />
 					<DataGridTextColumn Header="{x:Static root:PluginResources.LMP_Table_Header_LanguageCode}"
-										Binding="{Binding Path=LanguageCode}"
+										Binding="{Binding Path=LanguageCode, UpdateSourceTrigger=PropertyChanged}"
 										IsReadOnly="False"
 										Width="1*" />
 				</DataGrid.Columns>
@@ -98,7 +100,17 @@
 			<TextBlock Text="{Binding LanguagesCountMessage}"
 					   Grid.Row="3"
 					   VerticalAlignment="Top"
-					   Margin="16 5" />
+					   Margin="16 6" />
+
+			<Button Content="{x:Static root:PluginResources.LMP_NavigateToLanguageCodes_Message}"
+					Command="{Binding OpenHyperlinkCommand}"
+					CommandParameter="{x:Static root:Constants.LanguageCodesUri}"
+					ToolTip="{x:Static root:Constants.LanguageCodesUri}"
+					Style="{StaticResource Sdl.Button.HyperLinkStyle}"
+					Grid.Row="3"
+					VerticalAlignment="Top"
+					HorizontalAlignment="Right"
+					Margin="16 6" />
 
 			<Separator Grid.Row="4"
 					   VerticalAlignment="Top"
@@ -107,6 +119,7 @@
 			<Button Content="{x:Static root:PluginResources.LMP_Button_Reset}"
 					Command="{Binding ResetToDefaultCommand}"
 					Style="{StaticResource Sdl.Button.SecondaryStyle}"
+					IsEnabled="{Binding CanResetToDefaults}"
 					Grid.Row="4"
 					HorizontalAlignment="Left"
 					Cursor="Hand"
@@ -118,15 +131,15 @@
 						HorizontalAlignment="Right"
 						Margin="16">
 				
-				<Button Content="{x:Static root:PluginResources.LMP_Button_Ok}"
+				<Button Content="{x:Static root:PluginResources.LMP_Button_ApplyChanges}"
 						Command="{Binding ApplyChangesCommand}"
 						Style="{StaticResource Sdl.Button.SecondaryStyle}"
 						Cursor="Hand"
 						Width="120"
 						Margin="0 0 16 0" />
 
-				<Button Content="{x:Static root:PluginResources.LMP_Button_Cancel}"
-						Command="{Binding CancelChangesCommand}"
+				<Button Content="{x:Static root:PluginResources.LMP_Button_CloseApp}"
+						Command="{Binding CloseApplicationCommand}"
 						Style="{StaticResource Sdl.Button.SecondaryStyle}"
 						Cursor="Hand"
 						Width="120" />

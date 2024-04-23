@@ -19,9 +19,9 @@ namespace Sdl.Community.TermExcelerator.Tests
 			var entryLanguages = transformerService.CreateEntryLanguages(sampleExcelTerm);
 
 			//assert
-			Assert.Equal(entryLanguages.Count, 2);
-			Assert.Equal(entryLanguages[0].Locale, sampleExcelTerm.SourceCulture);
-			Assert.Equal(entryLanguages[1].Locale, sampleExcelTerm.TargetCulture);
+			Assert.Equal(2, entryLanguages.Count);
+			Assert.Equal(entryLanguages[0].Locale, sampleExcelTerm.SourceCulture.ToString());
+			Assert.Equal(entryLanguages[1].Locale, sampleExcelTerm.TargetCulture.ToString());
 
 		}
 

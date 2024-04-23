@@ -15,52 +15,25 @@ namespace GoogleCloudTranslationProvider.Extensions
 {
 	public static class DatabaseExtensions
 	{
-		public static async Task<List<LanguageMapping>> GetGoogleDefaultMapping(ITranslationOptions translationOptions)
+		public static List<LanguageMapping> GetGoogleDefaultMapping(ITranslationOptions translationOptions)
 		{
-			if (translationOptions.SelectedGoogleVersion == ApiVersion.V2)
+			var databaseFilePath = GetDatabaseFilePath(translationOptions.SelectedGoogleVersion);
+			if (!File.Exists(databaseFilePath))
 			{
-				if (!File.Exists(string.Format(Constants.DatabaseFilePath, PluginResources.Database_PluginName_V2)))
-				{
-					return null;
-				}
-
-				return CreateV2Database(translationOptions).Result;
-			}
-			else if (translationOptions.SelectedGoogleVersion == ApiVersion.V3)
-			{
-				if (!File.Exists(string.Format(Constants.DatabaseFilePath, PluginResources.Database_PluginName_V3)))
-				{
-					return null;
-				}
-
-				return CreateV3Database(translationOptions);
+				return null;
 			}
 
-			return null;
+			return translationOptions.SelectedGoogleVersion switch
+			{
+				ApiVersion.V2 => CreateDatabase(translationOptions, CreateV2Database),
+				ApiVersion.V3 => CreateDatabase(translationOptions, CreateV3Database),
+				_ => null
+			};
 		}
 
 		public static void CreateDatabase(ITranslationOptions translationOptions)
 		{
-			var languageMappings = new List<LanguageMapping>();
-			if (translationOptions.SelectedGoogleVersion == ApiVersion.V2)
-			{
-				if (File.Exists(string.Format(Constants.DatabaseFilePath, PluginResources.Database_PluginName_V2)))
-				{
-					return;
-				}
-
-				languageMappings = CreateV2Database(translationOptions).Result;
-			}
-			else if (translationOptions.SelectedGoogleVersion == ApiVersion.V3)
-			{
-				if (File.Exists(string.Format(Constants.DatabaseFilePath, PluginResources.Database_PluginName_V3)))
-				{
-					return;
-				}
-
-				languageMappings = CreateV3Database(translationOptions);
-			}
-
+			var languageMappings = CreateLanguageMappings(translationOptions);
 			languageMappings = languageMappings.OrderBy(x => x.Name).ThenBy(x => x.Region).ToList();
 			var database = translationOptions.SelectedGoogleVersion == ApiVersion.V2
 						 ? PluginResources.Database_PluginName_V2
@@ -69,54 +42,41 @@ namespace GoogleCloudTranslationProvider.Extensions
 			_ = new LanguageMappingDatabase(database, languageMappings);
 		}
 
-		private static async Task<List<LanguageMapping>> CreateV2Database(ITranslationOptions translationOptions)
+		private static List<LanguageMapping> CreateDatabase(ITranslationOptions translationOptions, Func<ITranslationOptions, List<LanguageMapping>> createDatabaseFunc)
 		{
-			var v2Connector = new V2Connector(translationOptions.ApiKey, null);
-			var v2Languages = v2Connector.GetLanguages().Result;
+			var languageMappings = createDatabaseFunc(translationOptions);
+			return languageMappings;
+		}
 
-			var languageMapping = new List<LanguageMapping>();
-			foreach (var language in v2Languages)
-			{
-				if (!IsValidLanguage(translationOptions.SelectedGoogleVersion, language))
-				{
-					continue;
-				}
+		private static List<LanguageMapping> CreateV2Database(ITranslationOptions translationOptions)
+		{
+			var v2Languages = translationOptions.V2SupportedLanguages;
 
-				var regex = new Regex(@"^(.*?)\s*(?:\((.*?)\))?$");
-				var match = regex.Match(language.LanguageName);
-
-				languageMapping.Add(new LanguageMapping
-				{
-					Name = match.Groups[1].Value,
-					Region = match.Groups[2].Success ? match.Groups[2].Value : null,
-					LanguageCode = language.LanguageCode
-				});
-			}
-
-			return languageMapping.Union(CreateChineseMapping()).ToList();
+			return v2Languages
+				.Where(language => IsValidLanguage(translationOptions.SelectedGoogleVersion, language))
+				.Select(language => ParseLanguageMapping(language.LanguageName, language.LanguageCode))
+				.Union(CreateChineseMapping())
+				.ToList();
 		}
 
 		private static List<LanguageMapping> CreateV3Database(ITranslationOptions translationOptions)
 		{
-			var v3Connector = new V3Connector(translationOptions);
-			var v3Languages = v3Connector.GetLanguages();
-
-			var languageMapping = new List<LanguageMapping>();
-			foreach (var language in v3Languages)
+			if (translationOptions.V3SupportedLanguages is null || !translationOptions.V3SupportedLanguages.Any())
 			{
-				if (!IsValidLanguage(translationOptions.SelectedGoogleVersion, language))
-				{
-					continue;
-				}
+				var v3Connector = new V3Connector(translationOptions);
+				translationOptions.V3SupportedLanguages = v3Connector.GetLanguages();
+			}
 
-				languageMapping.Add(new()
+			var v3Languages = translationOptions.V3SupportedLanguages;
+			return v3Languages
+				.Where(language => IsValidLanguage(translationOptions.SelectedGoogleVersion, language))
+				.Select(language => new LanguageMapping
 				{
 					Name = language.CultureInfo.DisplayName,
 					LanguageCode = language.GoogleLanguageCode
-				});
-			}
-
-			return languageMapping.Union(CreateChineseMapping()).ToList();
+				})
+				.Union(CreateChineseMapping())
+				.ToList();
 		}
 
 		private static List<LanguageMapping> CreateChineseMapping()
@@ -137,15 +97,27 @@ namespace GoogleCloudTranslationProvider.Extensions
 					continue;
 				}
 
+				var languageCode = languageRegion.StartsWith("Simplified") ? $"zh-CN" : languageRegion.StartsWith("Traditional") ? "zh-TW" : "zh";
 				chineseLanguageMapping.Add(new LanguageMapping
 				{
 					Name = languageName,
 					Region = languageRegion,
-					LanguageCode = $"zh-{language.Script}"
+					LanguageCode = languageCode
 				});
 			}
 
 			return chineseLanguageMapping;
+		}
+
+		private static List<LanguageMapping> CreateLanguageMappings(ITranslationOptions translationOptions)
+		{
+
+			return translationOptions.SelectedGoogleVersion switch
+			{
+				ApiVersion.V2 => CreateV2Database(translationOptions),
+				ApiVersion.V3 => CreateV3Database(translationOptions),
+				_ => new List<LanguageMapping>()
+			};
 		}
 
 		private static bool IsValidLanguage(ApiVersion apiVersion, object targetLanguage)
@@ -160,7 +132,6 @@ namespace GoogleCloudTranslationProvider.Extensions
 			// Chinese languages will be handled differently due to their language codes and the presence
 			// of both traditional and simplified variations.
 			// Here we can also find some duplicates.
-
 			return apiVersion switch
 			{
 				ApiVersion.V2 when targetLanguage is V2LanguageModel v2Language =>
@@ -174,6 +145,27 @@ namespace GoogleCloudTranslationProvider.Extensions
 				 || v3Language.GoogleLanguageCode == "ckb"),
 				_ => false
 			};
+		}
+
+		private static LanguageMapping ParseLanguageMapping(string languageName, string languageCode)
+		{
+			var regex = new Regex(@"^(.*?)\s*(?:\((.*?)\))?$");
+			var match = regex.Match(languageName);
+
+			return new LanguageMapping
+			{
+				Name = match.Groups[1].Value,
+				Region = match.Groups[2].Success ? match.Groups[2].Value : null,
+				LanguageCode = languageCode
+			};
+		}
+
+		private static string GetDatabaseFilePath(ApiVersion apiVersion)
+		{
+			var pluginName = apiVersion == ApiVersion.V2
+				? PluginResources.Database_PluginName_V2
+				: PluginResources.Database_PluginName_V3;
+			return string.Format(Constants.DatabaseFilePath, pluginName);
 		}
 	}
 }

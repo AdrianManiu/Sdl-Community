@@ -80,10 +80,10 @@ namespace Sdl.Community.ProjectTerms.Plugin.Utils
 
         public static bool VerifySingleFileProjectType()
         {
-            var project = SdlTradosStudio.Application.GetController<ProjectsController>().CurrentProject;
-            var projectVal = typeof(FileBasedProject).GetField(PluginResources.Constant_ProjectType, BindingFlags.NonPublic | BindingFlags.Instance);
+            var project = StudioContext.ProjectsController.CurrentProject;
+			var projectVal = typeof(FileBasedProject).GetProperty(PluginResources.Constant_ProjectType, BindingFlags.NonPublic | BindingFlags.Instance);
 
-            dynamic projectValDynamic = projectVal.GetValue(project);
+			dynamic projectValDynamic = projectVal.GetValue(project);
             dynamic projectType = projectValDynamic.ProjectType != null ? projectValDynamic.ProjectType : string.Empty;
 
             var projectTypeContent = Convert.ToString(projectType);
@@ -94,18 +94,18 @@ namespace Sdl.Community.ProjectTerms.Plugin.Utils
         public static string GetXMLFilePath(string projectPath, bool wordCloudFile = false)
         {
 	        if (wordCloudFile) return Path.Combine(projectPath, PluginResources.WordCloudFileName + ".xml");
-	        var projectName = SdlTradosStudio.Application.GetController<ProjectsController>().CurrentProject.GetProjectInfo().Name;
+	        var projectName = StudioContext.ProjectsController.CurrentProject.GetProjectInfo().Name;
 	        return Path.Combine(projectPath + "\\tmp", projectName + DateTime.Now.ToString("_yyyy_MM_dd_HH_mm", System.Globalization.DateTimeFormatInfo.InvariantInfo) + ".xml");
         }
 
         public static string GetProjectPath()
         {
-            return SdlTradosStudio.Application.GetController<ProjectsController>().CurrentProject.GetProjectInfo().LocalProjectFolder;
+            return StudioContext.ProjectsController.CurrentProject.GetProjectInfo().LocalProjectFolder;
         }
 
         public static FileBasedProject GetCurrentProject()
         {
-            return SdlTradosStudio.Application.GetController<ProjectsController>().CurrentProject;
+            return StudioContext.ProjectsController.CurrentProject;
         }
 
         public static string GetExistedFileName(string directoryPath)
@@ -116,7 +116,7 @@ namespace Sdl.Community.ProjectTerms.Plugin.Utils
 
         public static string GetSelectedProjectPath()
         {
-            return SdlTradosStudio.Application.GetController<ProjectsController>().SelectedProjects.First().FilePath;
+            return StudioContext.ProjectsController.SelectedProjects.First().FilePath;
         }
 
         public static string GetXmlFileName(string projectPath)

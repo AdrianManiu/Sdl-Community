@@ -40,6 +40,7 @@ namespace GoogleCloudTranslationProvider
 		public const string CustomModelsUri = "https://console.cloud.google.com/translation/datasets";
 		public const string ProjectUri = "https://console.cloud.google.com/home/dashboard";
 		public const string ResourceManagerUri = "https://console.cloud.google.com/cloud-resource-manager";
+		public const string LanguageCodesUri = "https://cloud.google.com/translate/docs/languages";
 
 
 		// Documentation
@@ -49,6 +50,6 @@ namespace GoogleCloudTranslationProvider
 		// Tell Me
 		public const string TellMe_StoreUrl = "https://appstore.rws.com/plugin/174/";
 		public const string TellMe_CommunityForumUrl = "https://community.rws.com/product-groups/trados-portfolio/rws-appstore/";
-		public const string TellMe_HelpUrl = "https://community.rws.com/product-groups/trados-portfolio/rws-appstore/w/wiki/6547/google-translator-provider";
+		public const string TellMe_HelpUrl = "https://appstore.rws.com/Plugin/174?tab=documentation";
 	}
 }

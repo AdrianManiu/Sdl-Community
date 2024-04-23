@@ -20,7 +20,7 @@ namespace Sdl.Community.AhkPlugin
 		{
 			// Open database (or create if not exits)
 			var defaultFolderPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-				"SDL Community", "AhkMasterScript");
+				"Trados AppStore", "AhkMasterScript");
 			if (!Directory.Exists(defaultFolderPath))
 			{
 				Directory.CreateDirectory(defaultFolderPath);
@@ -73,9 +73,8 @@ namespace Sdl.Community.AhkPlugin
 	{
 		protected override void Execute()
 		{
-			System.Diagnostics.Process.Start("https://community.sdl.com/product-groups/translationproductivity/w/customer-experience/3171.ahk-plugin");
+			System.Diagnostics.Process.Start("https://community.rws.com/product-groups/trados-portfolio/rws-appstore/w/wiki/3171/autohotkey-manager-ahk");
 
 		}
 	}
-
 }

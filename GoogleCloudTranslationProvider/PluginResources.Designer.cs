@@ -327,6 +327,19 @@ namespace GoogleCloudTranslationProvider {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to We couldn&apos;t find any instance of Google Cloud Translation Provider for the current project. To add it to your project, please follow these steps:
+        ///     1. Open Project Settings.
+        ///     2. Go to Translation Memory and Automated Translation.
+        ///     3. Choose Translation Provider from the list.
+        ///     4. Add it via the Use dropdown menu..
+        /// </summary>
+        public static string HowToAddProviderInfo {
+            get {
+                return ResourceManager.GetString("HowToAddProviderInfo", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Browse.
         /// </summary>
         public static string JsonFile_Browse {
@@ -381,20 +394,20 @@ namespace GoogleCloudTranslationProvider {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Cancel.
+        ///   Looks up a localized string similar to Apply.
         /// </summary>
-        public static string LMP_Button_Cancel {
+        public static string LMP_Button_ApplyChanges {
             get {
-                return ResourceManager.GetString("LMP_Button_Cancel", resourceCulture);
+                return ResourceManager.GetString("LMP_Button_ApplyChanges", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to OK.
+        ///   Looks up a localized string similar to Close.
         /// </summary>
-        public static string LMP_Button_Ok {
+        public static string LMP_Button_CloseApp {
             get {
-                return ResourceManager.GetString("LMP_Button_Ok", resourceCulture);
+                return ResourceManager.GetString("LMP_Button_CloseApp", resourceCulture);
             }
         }
         
@@ -413,6 +426,27 @@ namespace GoogleCloudTranslationProvider {
         public static string LMP_Filter_Watermark {
             get {
                 return ResourceManager.GetString("LMP_Filter_Watermark", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Missing a language code? Click here to find it.
+        /// </summary>
+        public static string LMP_NavigateToLanguageCodes_Message {
+            get {
+                return ResourceManager.GetString("LMP_NavigateToLanguageCodes_Message", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Warning: Resetting to default values!
+        ///All changes will be lost and the database will be restored to its original state.
+        ///
+        ///This action cannot be undone..
+        /// </summary>
+        public static string LMP_ResetToDefaults_Warning {
+            get {
+                return ResourceManager.GetString("LMP_ResetToDefaults_Warning", resourceCulture);
             }
         }
         
@@ -547,7 +581,7 @@ namespace GoogleCloudTranslationProvider {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Google Translator Provider - Plugin_Name.
+        ///   Looks up a localized string similar to Google Translator Provider.
         /// </summary>
         public static string Plugin_Name {
             get {
@@ -1139,6 +1173,16 @@ namespace GoogleCloudTranslationProvider {
         public static string SettingsView_Title {
             get {
                 return ResourceManager.GetString("SettingsView_Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        /// </summary>
+        public static System.Drawing.Icon sourceCode {
+            get {
+                object obj = ResourceManager.GetObject("sourceCode", resourceCulture);
+                return ((System.Drawing.Icon)(obj));
             }
         }
         

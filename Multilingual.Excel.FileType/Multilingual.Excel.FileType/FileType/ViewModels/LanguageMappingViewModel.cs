@@ -27,6 +27,7 @@ namespace Multilingual.Excel.FileType.FileType.ViewModels
 		private int _firstRowIndex;
 		private bool _firstRowIsHeading;
 		private bool _readAllWorkSheets;
+		private bool _readHyperlinks;
 
 		private LanguageMapping _selectedLanguageMapping;
 
@@ -51,6 +52,7 @@ namespace Multilingual.Excel.FileType.FileType.ViewModels
 			FirstRowIndex = Settings.LanguageMappingFirstRowIndex;
 			FirstRowIsHeading = Settings.LanguageMappingFirstRowIsHeading;
 			ReadAllWorkSheets = Settings.LanguageMappingReadAllWorkSheets;
+			ReadHyperlinks = Settings.LanguageMappingReadHyperlinks;
 
 			LanguageMappings = new ObservableCollection<LanguageMapping>(Settings.LanguageMappingLanguages);
 		}
@@ -122,6 +124,23 @@ namespace Multilingual.Excel.FileType.FileType.ViewModels
 			}
 		}
 
+		public bool ReadHyperlinks
+		{
+			get => _readHyperlinks;
+			set
+			{
+				if (_readHyperlinks == value)
+				{
+					return;
+				}
+
+				_readHyperlinks = value;
+				OnPropertyChanged(nameof(ReadHyperlinks));
+
+				Settings.LanguageMappingReadHyperlinks = _readHyperlinks;
+			}
+		}
+
 		public ObservableCollection<LanguageMapping> LanguageMappings
 		{
 			get => _languageMappings;
@@ -186,6 +205,7 @@ namespace Multilingual.Excel.FileType.FileType.ViewModels
 			FirstRowIndex = Settings.LanguageMappingFirstRowIndex;
 			FirstRowIsHeading = Settings.LanguageMappingFirstRowIsHeading;
 			ReadAllWorkSheets = Settings.LanguageMappingReadAllWorkSheets;
+			ReadHyperlinks = Settings.LanguageMappingReadHyperlinks;
 			LanguageMappings = new ObservableCollection<LanguageMapping>(Settings.LanguageMappingLanguages);
 
 			return Settings;
@@ -201,6 +221,7 @@ namespace Multilingual.Excel.FileType.FileType.ViewModels
 					languageMapping.ContextColumn = defaultLanguageMapping.ContextColumn;
 					languageMapping.CommentColumn = defaultLanguageMapping.CommentColumn;
 					languageMapping.CharacterLimitationColumn = defaultLanguageMapping.CharacterLimitationColumn;
+					languageMapping.LineLimitationColumn = defaultLanguageMapping.LineLimitationColumn;
 					languageMapping.PixelLimitationColumn = defaultLanguageMapping.PixelLimitationColumn;
 					languageMapping.PixelFontFamilyColumn = defaultLanguageMapping.PixelFontFamilyColumn;
 					languageMapping.PixelFontSizeColumn = defaultLanguageMapping.PixelFontSizeColumn;
@@ -235,6 +256,7 @@ namespace Multilingual.Excel.FileType.FileType.ViewModels
 							mapping.ContextColumn = viewModel.ContextColumn?.ToUpper().Trim(';');
 							mapping.CommentColumn = viewModel.CommentColumn?.ToUpper().Trim(';');
 							mapping.CharacterLimitationColumn = viewModel.CharacterLimitationColumn?.ToUpper();
+							mapping.LineLimitationColumn = viewModel.LineLimitationColumn?.ToUpper();
 							mapping.PixelLimitationColumn = viewModel.PixelLimitationColumn?.ToUpper();
 							mapping.PixelFontFamilyColumn = viewModel.PixelFontFamilyColumn?.ToUpper();
 							mapping.PixelFontSizeColumn = viewModel.PixelFontSizeColumn?.ToUpper();
@@ -261,6 +283,7 @@ namespace Multilingual.Excel.FileType.FileType.ViewModels
 							ContextColumn = viewModel.ContextColumn?.ToUpper().Trim(';'),
 							CommentColumn = viewModel.CommentColumn?.ToUpper().Trim(';'),
 							CharacterLimitationColumn = viewModel.CharacterLimitationColumn?.ToUpper(),
+							LineLimitationColumn = viewModel.LineLimitationColumn?.ToUpper(),
 							PixelLimitationColumn = viewModel.PixelLimitationColumn?.ToUpper(),
 							PixelFontFamilyColumn = viewModel.PixelFontFamilyColumn?.ToUpper(),
 							PixelFontSizeColumn = viewModel.PixelFontSizeColumn?.ToUpper(),
@@ -288,6 +311,7 @@ namespace Multilingual.Excel.FileType.FileType.ViewModels
 				languageMapping.ContextColumn = languageMappingClone.ContextColumn;
 				languageMapping.CommentColumn = languageMappingClone.CommentColumn;
 				languageMapping.CharacterLimitationColumn = languageMappingClone.CharacterLimitationColumn;
+				languageMapping.LineLimitationColumn = languageMappingClone.LineLimitationColumn;
 				languageMapping.PixelLimitationColumn = languageMappingClone.PixelLimitationColumn;
 				languageMapping.PixelFontFamilyColumn = languageMappingClone.PixelFontFamilyColumn;
 				languageMapping.PixelFontSizeColumn = languageMappingClone.PixelFontSizeColumn;

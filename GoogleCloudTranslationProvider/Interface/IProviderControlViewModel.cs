@@ -1,6 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using System.Windows.Input;
+using GoogleCloudTranslationProvider.Helpers;
 using GoogleCloudTranslationProvider.Models;
-using GoogleCloudTranslationProvider.Service;
 using GoogleCloudTranslationProvider.ViewModel;
 using Sdl.LanguagePlatform.Core;
 
@@ -36,8 +39,14 @@ namespace GoogleCloudTranslationProvider.Interfaces
 
 		string ProjectLocation { get; set; }
 
-		bool CanConnectToGoogleV2(HtmlUtil htmlUtil);
+		ICommand SwitchViewExternal { get; set; }
 
-		bool CanConnectToGoogleV3(LanguagePair[] languagePairs);
+		event EventHandler LanguageMappingLoaded;
+
+		Task<bool> CanConnectToGoogleV2(HtmlUtil htmlUtil);
+
+		bool CanConnectToGoogleV3(IEnumerable<LanguagePair> languagePairs);
+
+		void UpdateLanguageMapping();
 	}
 }

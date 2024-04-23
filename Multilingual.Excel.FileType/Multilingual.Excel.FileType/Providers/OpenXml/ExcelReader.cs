@@ -9,6 +9,7 @@ using DocumentFormat.OpenXml.Spreadsheet;
 using Multilingual.Excel.FileType.Providers.OpenXml.Model;
 using Multilingual.Excel.FileType.Services;
 using Fill = DocumentFormat.OpenXml.Spreadsheet.Fill;
+using Hyperlink = DocumentFormat.OpenXml.Spreadsheet.Hyperlink;
 
 namespace Multilingual.Excel.FileType.Providers.OpenXml
 {
@@ -84,11 +85,14 @@ namespace Multilingual.Excel.FileType.Providers.OpenXml
 			var excelWorkSheet = new ExcelSheet
 			{
 				Name = workSheet.Name,
-				Index = Convert.ToInt32(workSheet.SheetId.Value)
+				Index = Convert.ToInt32(workSheet.SheetId?.Value)
 			};
 
 			var excelRows = new List<ExcelRow>();
 			var sheetData = workSheetPart.Worksheet.Elements<SheetData>().First();
+
+			// get all hyperlinks - you might want to store them ...
+			var hyperlinks = workSheetPart.RootElement?.Descendants<Hyperlinks>().FirstOrDefault()?.Cast<Hyperlink>().ToList();
 
 			foreach (var row in sheetData.Elements<Row>())
 			{
@@ -97,7 +101,7 @@ namespace Multilingual.Excel.FileType.Providers.OpenXml
 					continue;
 				}
 
-				var excelRow = ReadExcelRow(row, spreadsheetDocument);
+				var excelRow = ReadExcelRow(row, spreadsheetDocument, workSheetPart, hyperlinks);
 				if (excelRow != null)
 				{
 					excelRows.Add(excelRow);
@@ -108,7 +112,7 @@ namespace Multilingual.Excel.FileType.Providers.OpenXml
 			return excelWorkSheet;
 		}
 
-		private ExcelRow ReadExcelRow(OpenXmlElement row, SpreadsheetDocument spreadsheetDocument)
+		private ExcelRow ReadExcelRow(OpenXmlElement row, SpreadsheetDocument spreadsheetDocument, WorksheetPart workSheetPart, IReadOnlyCollection<Hyperlink> hyperlinks)
 		{
 			var xmlRow = row as Row;
 			if (xmlRow == null)
@@ -138,6 +142,9 @@ namespace Multilingual.Excel.FileType.Providers.OpenXml
 				excelColumn.Index = columnIndex;
 
 				var cell = row.Descendants<Cell>().FirstOrDefault(a => a.CellReference?.Value == excelColumn.Name + excelRow.Index);
+
+				var hyperlink = GetHyperLink(workSheetPart, hyperlinks, cell);
+
 				var cellValue = GetCellValue(cell, spreadsheetDocument);
 				var cellBackgroundColor = GetCellBackgroundColor(cell, spreadsheetDocument);
 
@@ -145,6 +152,7 @@ namespace Multilingual.Excel.FileType.Providers.OpenXml
 				{
 					Column = excelColumn,
 					Value = cellValue,
+					Hyperlink = hyperlink,
 					Background = cellBackgroundColor
 				};
 
@@ -152,6 +160,66 @@ namespace Multilingual.Excel.FileType.Providers.OpenXml
 			}
 
 			return excelRow;
+		}
+
+		private Models.Hyperlink GetHyperLink(WorksheetPart workSheetPart, IEnumerable<Hyperlink> hyperlinks, Cell cell)
+		{
+			if (cell == null)
+			{
+				return null;
+			}
+
+			if (!_excelOptions.ReadHyperlinks)
+			{
+				return null;
+			}
+
+			// get the Hyperlink object "behind" the cell
+			var hyperlinkInstance = hyperlinks?.SingleOrDefault(i => i.Reference?.Value == cell.CellReference?.Value);
+			if (hyperlinkInstance == null)
+			{
+				return null;
+			}
+
+			// the URI is stored in the HyperlinkRelationship
+			var hyperlinkRelationship = workSheetPart.HyperlinkRelationships.SingleOrDefault(i => i.Id == hyperlinkInstance.Id);
+	
+
+			var hyperlink = new Models.Hyperlink
+			{
+				Id = hyperlinkInstance.Id,
+				Location = hyperlinkInstance.Location,
+				Reference = hyperlinkInstance.Reference,
+				IsExternal = hyperlinkRelationship?.IsExternal ?? false,
+				Display = hyperlinkInstance.Display,
+				Tooltip = hyperlinkInstance.Tooltip,
+				Url = Uri.UnescapeDataString(hyperlinkRelationship?.Uri.ToString() ?? string.Empty)
+			};
+
+			try
+			{
+				if (hyperlinkRelationship?.Uri != null)
+				{
+					if (hyperlinkRelationship.Uri.Scheme.StartsWith("mailto",
+							StringComparison.CurrentCultureIgnoreCase))
+					{
+						hyperlink.IsEmail = true;
+						hyperlink.Email = Uri.UnescapeDataString(hyperlinkRelationship.Uri.UserInfo + "@" + hyperlinkRelationship.Uri.Host);
+						var query = hyperlinkRelationship.Uri.Query.TrimStart('?');
+						if (query.StartsWith("subject", StringComparison.CurrentCultureIgnoreCase))
+						{
+							var indexOfSubject = query.IndexOf("subject=") + "subject=".Length;
+							hyperlink.Subject = Uri.UnescapeDataString(query.Substring(indexOfSubject));
+						}
+					}
+				}
+			}
+			catch
+			{
+				// ignore; catch all
+			}
+
+			return hyperlink;
 		}
 
 		private void AddColumnHeaders(OpenXmlElement row, SpreadsheetDocument spreadsheetDocument)
@@ -206,7 +274,7 @@ namespace Multilingual.Excel.FileType.Providers.OpenXml
 				Console.Out.WriteLine("RGB value -> {0}", ct.Rgb.Value);
 				return ct.Rgb.Value;
 			}
-		
+
 			var themeValue = ct.Theme;
 			if (themeValue != null)
 			{
@@ -222,8 +290,16 @@ namespace Multilingual.Excel.FileType.Providers.OpenXml
 			{
 				Console.Out.WriteLine("Indexed color -> {0}", ct.Indexed.Value);
 
-				var ic = (IndexedColors)styles.Stylesheet.Colors.IndexedColors.ChildElements[(int)ct.Indexed.Value];
-				return ic.ToString();
+				var ic = styles.Stylesheet.Colors?.IndexedColors?.ChildElements[(int)ct.Indexed.Value];
+				switch (ic)
+				{
+					case RgbColor rgbColor:
+						return rgbColor.Rgb?.Value;
+					case IndexedColors indexedColors:
+						return indexedColors.ToString();
+					default:
+						return null;
+				}
 			}
 
 			return null;
@@ -269,15 +345,15 @@ namespace Multilingual.Excel.FileType.Providers.OpenXml
 			}
 
 			//remove digits
-			string columnReference = Regex.Replace(cellReference.ToUpper(), @"[\d]", string.Empty);
+			var columnReference = Regex.Replace(cellReference.ToUpper(), @"[\d]", string.Empty);
 
-			int columnNumber = -1;
-			int mulitplier = 1;
+			var columnNumber = -1;
+			var mulitplier = 1;
 
 			//working from the end of the letters take the ASCII code less 64 (so A = 1, B =2...etc)
 			//then multiply that number by our multiplier (which starts at 1)
 			//multiply our multiplier by 26 as there are 26 letters
-			foreach (char c in columnReference.ToCharArray().Reverse())
+			foreach (var c in columnReference.ToCharArray().Reverse())
 			{
 				columnNumber += mulitplier * ((int)c - 64);
 

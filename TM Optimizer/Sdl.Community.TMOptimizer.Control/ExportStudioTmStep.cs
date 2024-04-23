@@ -37,8 +37,8 @@ namespace Sdl.Community.TMOptimizer.Control
             _exportTmxFile.DetectInfo = new DetectInfo
             {
                 DetectedVersion = DetectInfo.Versions.Studio,
-                SourceLanguage = new Language(_translationMemory.LanguageDirection.SourceLanguage),
-                TargetLanguage = new Language(_translationMemory.LanguageDirection.TargetLanguage),
+                SourceLanguage = new Language(_translationMemory.LanguageDirection.SourceLanguage.ToString()),
+                TargetLanguage = new Language(_translationMemory.LanguageDirection.TargetLanguage.ToString()),
                 OriginalSourceLanguage = _translationMemory.LanguageDirection.SourceLanguage.Name,
                 OriginalTargetLanguage = _translationMemory.LanguageDirection.TargetLanguage.Name,
                 TuCount = tuCount

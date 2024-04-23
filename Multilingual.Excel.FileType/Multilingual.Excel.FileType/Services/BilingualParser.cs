@@ -17,9 +17,12 @@ using Multilingual.Excel.FileType.Services.Entities;
 using Sdl.Core.Globalization;
 using Sdl.Core.Settings;
 using Sdl.FileTypeSupport.Framework.BilingualApi;
+using Sdl.FileTypeSupport.Framework.Core.Utilities.Formatting;
 using Sdl.FileTypeSupport.Framework.Core.Utilities.NativeApi;
+using Sdl.FileTypeSupport.Framework.Formatting;
 using Sdl.FileTypeSupport.Framework.IntegrationApi;
 using Sdl.FileTypeSupport.Framework.NativeApi;
+using Color = System.Drawing.Color;
 
 namespace Multilingual.Excel.FileType.Services
 {
@@ -133,7 +136,8 @@ namespace Multilingual.Excel.FileType.Services
 			{
 				ReadAllWorkSheets = LanguageMappingSettings.LanguageMappingReadAllWorkSheets,
 				FirstRowIndex = LanguageMappingSettings.LanguageMappingFirstRowIndex,
-				FirstRowIndexIsHeading = LanguageMappingSettings.LanguageMappingFirstRowIsHeading
+				FirstRowIndexIsHeading = LanguageMappingSettings.LanguageMappingFirstRowIsHeading,
+				ReadHyperlinks = LanguageMappingSettings.LanguageMappingReadHyperlinks,
 			};
 
 			var excelColumns = GetExcelColumns();
@@ -148,14 +152,14 @@ namespace Multilingual.Excel.FileType.Services
 				foreach (var excelRow in excelSheet.Rows)
 				{
 					// Create Paragraph from excelRow
-					var content = excelRow.Cells.FirstOrDefault(a => a.Column.Name == _sourceLanguageMapping.ContentColumn);
+					var cell = excelRow.Cells.FirstOrDefault(a => a.Column.Name == _sourceLanguageMapping.ContentColumn);
 
 					// Apply filter on fill color
 					var lockSegments = false;
 					if (_sourceLanguageMapping.FilterFillColorChecked)
 					{
 						var filterFillColors = FilterFillColors(_sourceLanguageMapping.FilterFillColor);
-						var excelCellFillColor = NormalizeHexCode(content?.Background);
+						var excelCellFillColor = NormalizeHexCode(cell?.Background);
 						var action = (Common.Enumerators.FilterScope)Enum.Parse(typeof(Common.Enumerators.FilterScope), _sourceLanguageMapping.FilterScope, true);
 
 						var containsColor = ContainsColor(filterFillColors, excelCellFillColor);
@@ -168,8 +172,8 @@ namespace Multilingual.Excel.FileType.Services
 										excelCellFillColor,
 										excelSheet.Name,
 										excelRow.Index,
-										content?.Column.Name,
-										content?.Value);
+										cell?.Column.Name,
+										cell?.Value);
 									continue;
 								case Enumerators.FilterScope.Lock:
 									lockSegments = true;
@@ -182,30 +186,32 @@ namespace Multilingual.Excel.FileType.Services
 								excelCellFillColor,
 								excelSheet.Name,
 								excelRow.Index,
-								content?.Column.Name,
-								content?.Value);
+								cell?.Column.Name,
+								cell?.Value);
 
 							continue;
 						}
 					}
 
-					//if (!string.IsNullOrEmpty(content?.Value))
-					//{
-					var contentWithOutCdata = content.Clone() as ExcelCell;
+					var contentWithOutCdata = cell.Clone() as ExcelCell;
 
-					var IsCDATA = ContentIsCDATA(content);
+					var IsCDATA = ContentIsCDATA(cell);
 					if (IsCDATA)
 					{
-						contentWithOutCdata.Value = content.Value.Substring(9);
+						contentWithOutCdata.Value = cell.Value.Substring(9);
 						contentWithOutCdata.Value = contentWithOutCdata.Value.Substring(0, contentWithOutCdata.Value.Length - 3);
 					}
+
+					var excelCell = excelRow.Cells.FirstOrDefault(a => a.Column.Name == _sourceLanguageMapping.ContentColumn);
+					var isHyperlink = !string.IsNullOrEmpty(excelCell.Hyperlink?.Reference);
 
 					if (EmbeddedContentSettings.EmbeddedContentProcess &&
 						//ContainsTags(content) &&
 						(EmbeddedContentSettings.EmbeddedContentFoundIn == EmbeddedContentSettings.FoundIn.All ||
 						 (IsCDATA && EmbeddedContentSettings.EmbeddedContentFoundIn == EmbeddedContentSettings.FoundIn.CDATA)))
 					{
-						var paragraphUnit = AddStructureParagraph(excelSheet, excelRow, IsCDATA, lockSegments);
+						var paragraphUnit = AddStructureParagraph(excelSheet, excelRow, IsCDATA, lockSegments, isHyperlink);
+
 						if (!structureInfoAddedToFirstParagraph)
 						{
 							paragraphUnit.Properties.Contexts.StructureInfo = GetStructureInfo(excelSheet);
@@ -215,11 +221,12 @@ namespace Multilingual.Excel.FileType.Services
 						Output.ProcessParagraphUnit(paragraphUnit);
 
 						PublishEmbeddedSubContent(EmbeddedContentSettings.EmbeddedContentProcessorId,
-							(IsCDATA ? contentWithOutCdata.Value : content.Value));
+							(IsCDATA ? contentWithOutCdata.Value : cell.Value));
 					}
 					else
 					{
-						var paragraphUnit = CreateParagraphUnit(excelSheet, excelRow, lockSegments);
+						var paragraphUnit = CreateParagraphUnit(excelSheet, excelRow, excelCell.Value, lockSegments, isHyperlink);
+
 						if (!structureInfoAddedToFirstParagraph)
 						{
 							paragraphUnit.Properties.Contexts.StructureInfo = GetStructureInfo(excelSheet);
@@ -228,10 +235,45 @@ namespace Multilingual.Excel.FileType.Services
 
 						Output.ProcessParagraphUnit(paragraphUnit);
 					}
-					//}
 
 					index++;
 					OnProgress(Convert.ToByte(Math.Round(100m * ((index + 1m) / totalRows), 0)));
+
+					if (isHyperlink)
+					{
+						if (excelCell.Hyperlink.IsEmail)
+						{
+							if (!string.IsNullOrEmpty(excelCell.Hyperlink.Email))
+							{
+								Output.ProcessParagraphUnit(CreateParagraphUnit(
+									excelSheet, excelRow, excelCell.Hyperlink.Email, lockSegments,
+									false, true, nameof(excelCell.Hyperlink.Email)));
+							}
+
+							if (!string.IsNullOrEmpty(excelCell.Hyperlink.Subject))
+							{
+								Output.ProcessParagraphUnit(CreateParagraphUnit(
+									excelSheet, excelRow, excelCell.Hyperlink.Subject, lockSegments,
+									false, true, nameof(excelCell.Hyperlink.Subject)));
+							}
+						}
+						else
+						{
+							if (!string.IsNullOrEmpty(excelCell.Hyperlink.Url))
+							{
+								Output.ProcessParagraphUnit(CreateParagraphUnit(
+									excelSheet, excelRow, excelCell.Hyperlink.Url, lockSegments,
+									false, true, nameof(excelCell.Hyperlink.Url)));
+							}
+						}
+
+						if (!string.IsNullOrEmpty(excelCell.Hyperlink.Tooltip))
+						{
+							Output.ProcessParagraphUnit(CreateParagraphUnit(
+								excelSheet, excelRow, excelCell.Hyperlink.Tooltip, lockSegments,
+								false, true, nameof(excelCell.Hyperlink.Tooltip)));
+						}
+					}
 				}
 			}
 
@@ -353,6 +395,14 @@ namespace Multilingual.Excel.FileType.Services
 				});
 			}
 
+			if (!string.IsNullOrEmpty(_sourceLanguageMapping.LineLimitationColumn))
+			{
+				excelColumns.Add(new ExcelColumn
+				{
+					Name = _sourceLanguageMapping.LineLimitationColumn
+				});
+			}
+
 			if (!string.IsNullOrEmpty(_sourceLanguageMapping.PixelLimitationColumn))
 			{
 				excelColumns.Add(new ExcelColumn
@@ -393,11 +443,11 @@ namespace Multilingual.Excel.FileType.Services
 			return columns;
 		}
 
-		private IParagraphUnit CreateParagraphUnit(ExcelSheet excelSheet, ExcelRow excelRow, bool lockSegments)
+		private IParagraphUnit CreateParagraphUnit(ExcelSheet excelSheet, ExcelRow excelRow, string value,
+			bool lockSegments, bool isHyperlink, bool isHyperlinkData = false, string hyperlinkDataType = null)
 		{
-			var content = excelRow.Cells.FirstOrDefault(a => a.Column.Name == _sourceLanguageMapping.ContentColumn);
-			//var lockType = (lockSegments ? LockTypeFlags.Manual : LockTypeFlags.Unlocked);
-			var structureParagraphUnit = GetStructureParagraphUnit(excelSheet, excelRow, LockTypeFlags.Unlocked, false, lockSegments);
+			var structureParagraphUnit = GetStructureParagraphUnit(
+				excelSheet, excelRow, LockTypeFlags.Unlocked, false, lockSegments, isHyperlink, isHyperlinkData, hyperlinkDataType);
 			var segmentPairProperties = ItemFactory.CreateSegmentPairProperties();
 			segmentPairProperties.IsLocked = lockSegments;
 			if (_sourceLanguageMapping == null)
@@ -405,7 +455,7 @@ namespace Multilingual.Excel.FileType.Services
 				return structureParagraphUnit;
 			}
 
-			var segment = GetSegment(content, segmentPairProperties);
+			var segment = GetSegment(value, segmentPairProperties);
 			segment.Properties.IsLocked = lockSegments;
 
 			IAbstractMarkupDataContainer currentContainer = structureParagraphUnit.Source;
@@ -435,29 +485,33 @@ namespace Multilingual.Excel.FileType.Services
 			}
 
 			AddContextToParagraph(excelRow, structureParagraphUnit);
-			AddCommentsToParagraph(excelRow, structureParagraphUnit);
+			if (!isHyperlinkData)
+			{
+				AddCommentsToParagraph(excelRow, structureParagraphUnit);
+			}
+
 
 			return structureParagraphUnit;
 		}
 
-		private ISegment GetSegment(ExcelCell content, ISegmentPairProperties segmentPairProperties)
+		private ISegment GetSegment(string value, ISegmentPairProperties segmentPairProperties)
 		{
-			var xmlNode = GetXmlNodeFromContent(content);
+			var xmlNode = GetXmlNodeFromContent(value);
 			var segment = xmlNode == null
-				? _segmentBuilder.CreateSegment(content?.Value, segmentPairProperties)
+				? _segmentBuilder.CreateSegment(value, segmentPairProperties)
 				: _segmentBuilder.CreateSegment(xmlNode, segmentPairProperties, SegmentationHint.MayExclude);
 
 			return segment;
 		}
 
-		private XmlNode GetXmlNodeFromContent(ExcelCell content)
+		private XmlNode GetXmlNodeFromContent(string value)
 		{
-			if (string.IsNullOrEmpty(content?.Value))
+			if (string.IsNullOrEmpty(value))
 			{
 				return null;
 			}
 
-			var cellContent = _entityService.MarkupKnownEntities(content.Value);
+			var cellContent = _entityService.MarkupKnownEntities(value);
 			cellContent = _entityService.EscapeXmlCharacters(cellContent);
 
 			try
@@ -500,25 +554,63 @@ namespace Multilingual.Excel.FileType.Services
 			return null;
 		}
 
-		private IParagraphUnit AddStructureParagraph(ExcelSheet excelSheet, ExcelRow excelRow, bool isCDATA, bool lockSegments)
+		private IParagraphUnit AddStructureParagraph(ExcelSheet excelSheet, ExcelRow excelRow,
+			bool isCDATA, bool lockSegments, bool isHyperlink, bool isHyperlinkData = false, string hyperlinkDataType = null)
 		{
-			var structureParagraphUnit = GetStructureParagraphUnit(excelSheet, excelRow, LockTypeFlags.Structure, isCDATA, lockSegments);
+			var structureParagraphUnit = GetStructureParagraphUnit(
+				excelSheet, excelRow, LockTypeFlags.Structure, isCDATA, lockSegments, isHyperlink, isHyperlinkData, hyperlinkDataType);
 
 			AddContextToParagraph(excelRow, structureParagraphUnit);
-			AddCommentsToParagraph(excelRow, structureParagraphUnit);
+			if (!isHyperlinkData)
+			{
+				AddCommentsToParagraph(excelRow, structureParagraphUnit);
+			}
 
 			return structureParagraphUnit;
 		}
 
-		private IParagraphUnit GetStructureParagraphUnit(ExcelSheet excelSheet, ExcelRow excelRow, LockTypeFlags lockType, bool IsCDATA, bool lockSegments)
+		private IParagraphUnit GetStructureParagraphUnit(ExcelSheet excelSheet, ExcelRow excelRow,
+			LockTypeFlags lockType, bool IsCDATA, bool lockSegments, bool isHyperlink, bool isHyperlinkData = false, string hyperlinkDataType = null)
 		{
+			var excelCell = excelRow.Cells.FirstOrDefault(a => a.Column.Name == _sourceLanguageMapping.ContentColumn);
 			var structureParagraphUnit = ItemFactory.CreateParagraphUnit(lockType);
 			structureParagraphUnit.Properties.Comments = PropertiesFactory.CreateCommentProperties();
-
 			var contextProperties = ItemFactory.PropertiesFactory.CreateContextProperties();
 
-			var paragraphContextInfo = ItemFactory.PropertiesFactory.CreateContextInfo(StandardContextTypes.Paragraph);
-			contextProperties.Contexts.Add(paragraphContextInfo);
+			if (isHyperlinkData)
+			{
+				var hyperlinkContextInfo = ItemFactory.PropertiesFactory.CreateContextInfo(StandardContextTypes.Hyperlink);
+				hyperlinkContextInfo.DefaultFormatting = null;
+				hyperlinkContextInfo.DisplayName = hyperlinkDataType;
+				hyperlinkContextInfo.SetMetaData("HyperlinkDataType", hyperlinkDataType);
+				hyperlinkContextInfo.SetMetaData("HyperlinkId", excelCell?.Hyperlink?.Id);
+				hyperlinkContextInfo.SetMetaData("HyperlinkLocation", excelCell?.Hyperlink?.Location);
+				hyperlinkContextInfo.SetMetaData("HyperlinkReference", _sourceLanguageMapping.ContentColumn + excelRow.Index);
+				hyperlinkContextInfo.SetMetaData("HyperlinkIsExternal", excelCell?.Hyperlink?.IsExternal.ToString());
+				hyperlinkContextInfo.SetMetaData("HyperlinkDisplay", excelCell?.Hyperlink?.Display);
+				contextProperties.Contexts.Add(hyperlinkContextInfo);
+			}
+
+			var cellContextInfo = ItemFactory.PropertiesFactory.CreateContextInfo(StandardContextTypes.Cell);
+			cellContextInfo.DisplayName = _sourceLanguageMapping.ContentColumn + excelRow.Index;
+			if (isHyperlink && !isHyperlinkData)
+			{
+				var formattingGroup = new FormattingGroup
+				{
+						new Sdl.FileTypeSupport.Framework.Formatting.Underline(),
+						new TextColor(Color.FromArgb(5, 99, 193))
+					};
+				cellContextInfo.DefaultFormatting = formattingGroup;
+			}
+
+			cellContextInfo.SetMetaData("CellReference", _sourceLanguageMapping.ContentColumn + excelRow.Index);
+			contextProperties.Contexts.Add(cellContextInfo);
+
+			var workSheetContextInfo = ItemFactory.PropertiesFactory.CreateContextInfo(StandardContextTypes.WorkSheet);
+			workSheetContextInfo.DefaultFormatting = null;
+			workSheetContextInfo.DisplayName = excelSheet.Name;
+			workSheetContextInfo.SetMetaData("SheetIndex", excelSheet.Index.ToString());
+			contextProperties.Contexts.Add(workSheetContextInfo);
 
 			var multilingualParagraphContextInfo = _segmentBuilder.CreateMultilingualParagraphContextInfo();
 			contextProperties.Contexts.Add(multilingualParagraphContextInfo);
@@ -527,6 +619,7 @@ namespace Multilingual.Excel.FileType.Services
 
 			var content = excelRow.Cells.FirstOrDefault(a => a.Column.Name == _sourceLanguageMapping.ContentColumn);
 			var charLimit = excelRow.Cells.FirstOrDefault(a => a.Column.Name == _sourceLanguageMapping.CharacterLimitationColumn);
+			var lineLimit = excelRow.Cells.FirstOrDefault(a => a.Column.Name == _sourceLanguageMapping.LineLimitationColumn);
 			var pixelLimit = excelRow.Cells.FirstOrDefault(a => a.Column.Name == _sourceLanguageMapping.PixelLimitationColumn);
 			var pixelFontName = excelRow.Cells.FirstOrDefault(a => a.Column.Name == _sourceLanguageMapping.PixelFontFamilyColumn);
 			var pixelFontSize = excelRow.Cells.FirstOrDefault(a => a.Column.Name == _sourceLanguageMapping.PixelFontSizeColumn);
@@ -535,6 +628,7 @@ namespace Multilingual.Excel.FileType.Services
 			multilingualParagraphContextInfo.SetMetaData(FiletypeConstants.MultilingualExcelSheetName, excelSheet.Name);
 			multilingualParagraphContextInfo.SetMetaData(FiletypeConstants.MultilingualExcelRowIndex, excelRow.Index.ToString());
 			multilingualParagraphContextInfo.SetMetaData(FiletypeConstants.MultilingualExcelCharacterLimitationSource, charLimit?.Value ?? "0");
+			multilingualParagraphContextInfo.SetMetaData(FiletypeConstants.MultilingualExcelLineLimitationSource, lineLimit?.Value ?? "0");
 			multilingualParagraphContextInfo.SetMetaData(FiletypeConstants.MultilingualExcelPixelLimitationSource, pixelLimit?.Value ?? "0");
 			multilingualParagraphContextInfo.SetMetaData(FiletypeConstants.MultilingualExcelPixelFontNameSource, pixelFontName?.Value ?? string.Empty);
 			multilingualParagraphContextInfo.SetMetaData(FiletypeConstants.MultilingualExcelPixelFontSizeSource, pixelFontSize?.Value ?? "0");
@@ -559,6 +653,7 @@ namespace Multilingual.Excel.FileType.Services
 						{
 							displayName = FiletypeConstants.ExcelContextInformationDisplayName;
 						}
+
 						var propertyParagraphContextInfo = _segmentBuilder.CreateExcelContextParagraphContextInfo(displayName, cell.Value);
 						structureParagraphUnit.Properties.Contexts.Contexts.Add(propertyParagraphContextInfo);
 					}

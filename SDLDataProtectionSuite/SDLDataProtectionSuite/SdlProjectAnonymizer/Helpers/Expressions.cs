@@ -1,47 +1,49 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Linq;
 using System.Windows.Forms;
-using OfficeOpenXml;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Spreadsheet;
+using Sdl.Community.SdlDataProtectionSuite.SdlProjectAnonymizer.Helpers.OpenXml;
 using Sdl.Community.SdlDataProtectionSuite.SdlProjectAnonymizer.Models;
 
 namespace Sdl.Community.SdlDataProtectionSuite.SdlProjectAnonymizer.Helpers
 {
 	public static class Expressions
 	{
-		public static void ExportExporessions(string filePath, List<RegexPattern> patterns)
+		public static void ExportExpressions(string filePath, List<RegexPattern> patterns)
 		{
-			var package = GetExcelPackage(filePath, true);
-			var worksheet = package.Workbook.Worksheets.Add("Exported expressions");
-			var lineNumber = 1;
+			var package = Excel.GetSheetInfo(filePath, true);
+			var excelDocument = new Excel();
+			var worksheet = excelDocument.AddWorksheet(package, "Exported expressions");
 			var order = 0;
 
-			worksheet.Cells["A" + lineNumber].Value = "ID";
-			worksheet.Cells["B" + lineNumber].Value = "Order";
-			worksheet.Cells["C" + lineNumber].Value = "Rule";
-			worksheet.Cells["D" + lineNumber].Value = "Description";
+			var rowIndex = Convert.ToUInt32(1);
 
-			for (int i = patterns.Count - 1; i >= 0; i--)
+			excelDocument.SetCellValue(package, worksheet, 1, rowIndex, "ID");
+			excelDocument.SetCellValue(package, worksheet, 2, rowIndex, "Order");
+			excelDocument.SetCellValue(package, worksheet, 3, rowIndex, "Rule");
+			excelDocument.SetCellValue(package, worksheet, 4, rowIndex, "Description");
+
+			for (var i = patterns.Count - 1; i >= 0; i--)
 			{
-				if (patterns[i] != null)
-				{
-					lineNumber++;
-					worksheet.Cells["A" + lineNumber].Value = patterns[i].Id;
-					worksheet.Cells["B" + lineNumber].Value = order++;
-					worksheet.Cells["C" + lineNumber].Value = patterns[i].Pattern;
-					worksheet.Cells["D" + lineNumber].Value = patterns[i].Description;
-				}
+				if (patterns[i] == null)
+					continue;
+
+				rowIndex++;
+				excelDocument.SetCellValue(package, worksheet, 1, rowIndex, patterns[i].Id);
+				var orderNumber = order++;
+				excelDocument.SetCellValue(package, worksheet, 2, rowIndex, orderNumber.ToString());
+				excelDocument.SetCellValue(package, worksheet, 3, rowIndex, patterns[i].Pattern);
+				excelDocument.SetCellValue(package, worksheet, 4, rowIndex, patterns[i].Description);
 			}
+			excelDocument.SetColumnWidth(worksheet, 1, 10);
+			excelDocument.SetColumnWidth(worksheet, 2, 10);
+			excelDocument.SetColumnWidth(worksheet, 3, 50);
+			excelDocument.SetColumnWidth(worksheet, 4, 35);
 
-			worksheet.Column(1).Width = 10;
-			worksheet.Column(2).Width = 10;
-			worksheet.Column(3).Width = 50;
-			worksheet.Column(4).Width = 35;
-
-			var range = worksheet.Cells[1, 1, lineNumber, 4];
-			var table = worksheet.Tables.Add(range, "tableData");
-
-			package.Save();
+			worksheet.Save();
+			package.Dispose();
 		}
 
 		public static List<RegexPattern> GetImportedExpressions(List<string> files)
@@ -49,24 +51,20 @@ namespace Sdl.Community.SdlDataProtectionSuite.SdlProjectAnonymizer.Helpers
 			var patterns = new List<RegexPattern>();
 			foreach (var file in files)
 			{
-				var package = GetExcelPackage(file);
-				var workSheet = package.Workbook.Worksheets[1];
+				using var doc = SpreadsheetDocument.Open(file, false);
 
-				var colmun01 = workSheet.Cells[1, 1].Value;
-				var column02 = workSheet.Cells[1, 2].Value;
-				var column03 = workSheet.Cells[1, 3].Value;
-				var column04 = workSheet.Cells[1, 4].Value;
+				var excelReader = new ExcelReader(doc.WorkbookPart.SharedStringTablePart?.SharedStringTable);
 
-				if (!IsValidColumnHeader(colmun01?.ToString(), "ID") |
-				    !IsValidColumnHeader(column02?.ToString(), "Order") |
-				    !IsValidColumnHeader(column03?.ToString(), "Rule") |
-				    !IsValidColumnHeader(column04?.ToString(), "Description"))
-				{
-					return null;
-				}
+				var sheet = doc.WorkbookPart.Workbook.Sheets.GetFirstChild<Sheet>();
 
+				//Get the Worksheet instance.
+				var worksheet = (doc.WorkbookPart.GetPartById(sheet.Id.Value) as WorksheetPart).Worksheet;
 
-				for (var i = workSheet.Dimension.Start.Row + 1; i <= workSheet.Dimension.End.Row; i++)
+				//Fetch all the rows present in the Worksheet.
+				var rows = worksheet.GetFirstChild<SheetData>().Descendants<Row>();
+
+				//Loop through the Worksheet rows.
+				foreach (var row in rows)
 				{
 					var pattern = new RegexPattern
 					{
@@ -75,25 +73,42 @@ namespace Sdl.Community.SdlDataProtectionSuite.SdlProjectAnonymizer.Helpers
 						Pattern = string.Empty
 					};
 
-					for (var j = workSheet.Dimension.Start.Column; j <= workSheet.Dimension.End.Column; j++)
+					var colValue = row.ToList();
+					if (row.RowIndex.Value == 1)
 					{
-						var address = workSheet.Cells[i, j].Address;
-
-						var cellValue = workSheet.Cells[i, j].Value;
-						if (address.Contains("A"))
+						if (!IsValidColumnHeader(excelReader.GetCellText(colValue[0].InnerText), "ID") |
+							!IsValidColumnHeader(excelReader.GetCellText(colValue[1].InnerText), "Order") |
+							!IsValidColumnHeader(excelReader.GetCellText(colValue[2].InnerText), "Rule") |
+							!IsValidColumnHeader(excelReader.GetCellText(colValue[3].InnerText), "Description")
+						   )
 						{
-							pattern.Id = cellValue?.ToString() ?? string.Empty;
-						}
-						else if (address.Contains("C"))
-						{
-							pattern.Pattern = cellValue?.ToString() ?? string.Empty;
-						}
-						else if (address.Contains("D"))
-						{
-							pattern.Description = cellValue?.ToString() ?? string.Empty;
+							return null;
 						}
 					}
-					patterns.Add(pattern);
+
+					//Use the first row to add columns to DataTable.
+					if (row.RowIndex.Value > 1)
+					{
+						foreach (var cell in colValue)
+						{
+							var address = ((CellType)cell).CellReference?.Value;
+							var cellValue = excelReader.GetCellText(cell.InnerText);
+							if (address.Contains("A"))
+							{
+								pattern.Id = cellValue ?? string.Empty;
+							}
+							else if (address.Contains("C"))
+							{
+								pattern.Pattern = cellValue ?? string.Empty;
+							}
+							else if (address.Contains("D"))
+							{
+								pattern.Description = cellValue ?? string.Empty;
+							}
+						}
+
+						patterns.Add(pattern);
+					}
 				}
 			}
 			return patterns;
@@ -109,35 +124,6 @@ namespace Sdl.Community.SdlDataProtectionSuite.SdlProjectAnonymizer.Helpers
 			}
 
 			return true;
-		}
-
-		private static ExcelPackage GetExcelPackage(string filePath, bool isExport = false)
-		{
-			if (isExport)
-			{
-				CreateExcelWithPatterns(ref filePath);
-			}
-
-			var fileInfo = new FileInfo(filePath);
-			var excelPackage = new ExcelPackage(fileInfo);
-			return excelPackage;
-		}
-
-		private static void CreateExcelWithPatterns(ref string filePath)
-		{
-			try
-			{
-				if (File.Exists(filePath))
-				{
-					File.Delete(filePath);
-				}
-			}
-			catch (Exception e)
-			{
-				Console.Write(e);
-				filePath = filePath.Insert(filePath.IndexOf(".xlsx", StringComparison.Ordinal), "(new)");
-				CreateExcelWithPatterns(ref filePath);
-			}
 		}
 	}
 }

@@ -45,11 +45,10 @@ namespace GoogleCloudTranslationProvider.GoogleAPI
 			}
 		}
 
-		public void TryAuthenticate(LanguagePair[] languagePair = null)
+		public void TryAuthenticate()
 		{
 			var sourceCultureInfo = new CultureInfo("en-GB");
 			var targetCultureInfo = new CultureInfo("de-DE");
-
 			var request = new TranslateTextRequest
 			{
 				Contents = { string.Empty },
@@ -66,18 +65,33 @@ namespace GoogleCloudTranslationProvider.GoogleAPI
 		#endregion
 
 		#region Languages
-		public bool IsSupportedLanguage(CultureInfo sourceLanguage, CultureInfo targetLanguage)
+		public bool IsSupportedLanguage(CultureCode sourceCulture, CultureCode targetCulture)
 		{
-			_supportedLanguages ??= new();
-			if (!_supportedLanguages.Any())
+			EnsureSupportedLanguagesInitialized();
+			var sourceLanguageCode = sourceCulture.GetLanguageCode(ApiVersion.V3);
+			var targetLanguageCode = targetCulture.GetLanguageCode(ApiVersion.V3);
+			if (string.IsNullOrEmpty(sourceLanguageCode) || string.IsNullOrEmpty(targetLanguageCode))
+			{
+				return false;
+			}
+
+			var sourceGoogleLanguage = GetSupportedLanguage(sourceLanguageCode);
+			var targetGoogleLanguage = GetSupportedLanguage(targetLanguageCode);
+			return sourceGoogleLanguage?.SupportSource is true
+				&& targetGoogleLanguage?.SupportTarget is true;
+		}
+
+		private void EnsureSupportedLanguagesInitialized()
+		{
+			if (_supportedLanguages is null || !_supportedLanguages.Any())
 			{
 				SetGoogleAvailableLanguages();
 			}
+		}
 
-			var searchedSource = _supportedLanguages.FirstOrDefault(x => x.CultureInfo.Name.Equals(sourceLanguage.TwoLetterISOLanguageName));
-			var searchedTarget = _supportedLanguages.FirstOrDefault(x => x.CultureInfo.Name.Equals(targetLanguage.TwoLetterISOLanguageName));
-
-			return searchedSource.SupportSource && searchedTarget.SupportTarget;
+		private V3LanguageModel GetSupportedLanguage(string languageCode)
+		{
+			return _supportedLanguages.FirstOrDefault(lang => lang.GoogleLanguageCode.Equals(languageCode));
 		}
 
 		public List<V3LanguageModel> GetLanguages()
@@ -151,13 +165,11 @@ namespace GoogleCloudTranslationProvider.GoogleAPI
 
 		private TranslateTextRequest CreateTranslationRequest(CultureCode sourceLanguage, CultureCode targetLanguage, string sourceText, string format)
 		{
-			var sourceCultureInfo = new CultureInfo(sourceLanguage.Name);
-			var targetCultureInfo = new CultureInfo(targetLanguage.Name);
 			return new TranslateTextRequest
 			{
 				Contents = { sourceText },
-				SourceLanguageCode = sourceCultureInfo.GetLanguageCode(ApiVersion.V3),
-				TargetLanguageCode = targetCultureInfo.GetLanguageCode(ApiVersion.V3),
+				SourceLanguageCode = sourceLanguage.GetLanguageCode(ApiVersion.V3),
+				TargetLanguageCode = targetLanguage.GetLanguageCode(ApiVersion.V3),
 				ParentAsLocationName = new LocationName(_options.ProjectId, _options.ProjectLocation),
 				MimeType = format == "text" ? "text/plain" : "text/html",
 				Model = SetCustomModel(sourceLanguage, targetLanguage),
@@ -205,6 +217,7 @@ namespace GoogleCloudTranslationProvider.GoogleAPI
 				ParentAsLocationName = new LocationName(_options.ProjectId, _options.ProjectLocation)
 			};
 
+			// var dataset = AutoMlClient.Create().ListDatasets(new ListDatasetsRequest() {  ParentAsLocationName = new LocationName(_options.ProjectId, _options.ProjectLocation) } ).ToList();
 			return AutoMlClient.Create().ListModels(request).ToList();
 		}
 
